@@ -18,7 +18,6 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
 
-
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -55,7 +54,13 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(port);
+  try {
+    await app.listen(port);
+    logger.log(`Aplicación corriendo en: http://localhost:${port}`);
+  } catch (error) {
+    logger.error('Error al arrancar la aplicación:', error);
+  }
+
 
   logger.log(`Aplicación corriendo en: http://localhost:${port}`);
   logger.log(`Documentación Swagger: http://localhost:${port}/api/docs`);
