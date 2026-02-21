@@ -9,6 +9,7 @@ import { EmailModule } from './modules/email/email.module';
 import { UseKeysModule } from './modules/admin/use-keys.module';
 import { JwtAuthGuard } from './common/guard/jwt-auth.guard';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { InventoryModule } from './modules/Inventory/inventory.module';
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 
     AuthModule,
     EmailModule,
-    UseKeysModule
+    UseKeysModule,
+    InventoryModule
   ],
   controllers: [AppController],
   providers: [
