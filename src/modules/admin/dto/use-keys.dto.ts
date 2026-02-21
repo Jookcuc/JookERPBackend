@@ -1,21 +1,17 @@
 import { IsNotEmpty, IsString, IsInt, Min, Max, IsOptional } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class GenerateUseKeyDto {
-  @ApiProperty({
-    example: 'JK',
-    description: 'Prefijo para la llave',
-    default: 'JK',
-  })
+  @ApiProperty({ example: 1, description: 'ID de la empresa a la que pertenece la llave' })
+  @IsInt()
+  companyId: number;
+
+  @ApiPropertyOptional({ example: 'JK', default: 'JK' })
   @IsOptional()
   @IsString()
   prefix?: string = 'JK';
 
-  @ApiProperty({
-    example: 30,
-    description: 'Días hasta que expire la llave',
-    default: 30,
-  })
+  @ApiPropertyOptional({ example: 30, default: 30 })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -24,32 +20,23 @@ export class GenerateUseKeyDto {
 }
 
 export class GenerateMultipleKeysDto {
-  @ApiProperty({
-    example: 10,
-    description: 'Cantidad de llaves a generar',
-    minimum: 1,
-    maximum: 100,
-  })
+  @ApiProperty({ example: 1, description: 'ID de la empresa a la que pertenecen las llaves' })
+  @IsInt()
+  companyId: number;
+
+  @ApiProperty({ example: 10, minimum: 1, maximum: 100 })
   @IsNotEmpty()
   @IsInt()
   @Min(1)
   @Max(100)
   quantity: number;
 
-  @ApiProperty({
-    example: 'JK',
-    description: 'Prefijo para las llaves',
-    default: 'JK',
-  })
+  @ApiPropertyOptional({ example: 'JK', default: 'JK' })
   @IsOptional()
   @IsString()
   prefix?: string = 'JK';
 
-  @ApiProperty({
-    example: 30,
-    description: 'Días hasta que expiren las llaves',
-    default: 30,
-  })
+  @ApiPropertyOptional({ example: 30, default: 30 })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -62,6 +49,7 @@ export interface GeneratedKeyDto {
   expiresAt: Date | null;
   createdAt: Date;
   status: string;
+  companyId: number;
 }
 
 export interface KeyError {

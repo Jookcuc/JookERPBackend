@@ -4,6 +4,7 @@ import { UseKeysService } from './use-keys.service';
 import { GenerateUseKeyDto, GenerateMultipleKeysDto } from './dto/use-keys.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guard/roles.guard';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('Admin - Use Keys')
 @ApiBearerAuth('JWT-auth')
@@ -13,6 +14,7 @@ import { RolesGuard } from '../../common/guard/roles.guard';
 export class UseKeysController {
   constructor(private readonly useKeysService: UseKeysService) {}
 
+  @Public()
   @Post('generate')
   @ApiOperation({ summary: 'Generar una llave de uso' })
   @ApiResponse({ status: 201, description: 'Llave generada exitosamente' })
@@ -20,6 +22,8 @@ export class UseKeysController {
     return this.useKeysService.generateUseKey(dto);
   }
 
+
+  @Public()
   @Post('generate/multiple')
   @ApiOperation({ summary: 'Generar múltiples llaves de uso' })
   @ApiResponse({ status: 201, description: 'Llaves generadas exitosamente' })

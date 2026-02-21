@@ -13,6 +13,9 @@ export class InventoryMovement {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ name: 'company_id' })
+  companyId: number;
+
   @Column({ name: 'product_id' })
   productId: number;
 

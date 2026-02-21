@@ -13,7 +13,7 @@ export class UseKeysService {
   ) {}
 
   async generateUseKey(dto: GenerateUseKeyDto): Promise<GeneratedKeyDto> {
-    const { prefix = 'JK', expiresDays = 30 } = dto;
+    const { prefix = 'JK', expiresDays = 30, companyId } = dto;
 
     let attempts = 0;
     const maxAttempts = 10;
@@ -23,10 +23,7 @@ export class UseKeysService {
         const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase();
         const keyValue = `${prefix}${randomPart}`;
 
-        const exists = await this.userKeyRepository.findOne({
-          where: { keyValue },
-        });
-
+        const exists = await this.userKeyRepository.findOne({ where: { keyValue } });
         if (exists) {
           attempts++;
           continue;
@@ -35,21 +32,21 @@ export class UseKeysService {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + expiresDays);
 
-
-        const keyData: Partial<UserKey> = {
+        const userKey = this.userKeyRepository.create({
           keyValue,
           userId: undefined,
+          companyId,
           used: false,
           expiresAt,
-        };
+        });
 
-        const userKey = this.userKeyRepository.create(keyData);
         const savedKey = await this.userKeyRepository.save(userKey);
 
         return {
           keyValue: savedKey.keyValue,
           expiresAt: savedKey.expiresAt,
           createdAt: savedKey.createdAt,
+          companyId: savedKey.companyId,
           status: 'DISPONIBLE',
         };
       } catch (error) {
@@ -64,19 +61,19 @@ export class UseKeysService {
   }
 
   async generateMultipleKeys(dto: GenerateMultipleKeysDto) {
-    const { quantity, prefix = 'JK', expiresDays = 30 } = dto;
+    const { quantity, prefix = 'JK', expiresDays = 30, companyId } = dto;
 
     const keys: GeneratedKeyDto[] = [];
     const errors: KeyError[] = [];
 
     for (let i = 0; i < quantity; i++) {
       try {
-        const key = await this.generateUseKey({ prefix, expiresDays });
+        const key = await this.generateUseKey({ prefix, expiresDays, companyId });
         keys.push(key);
       } catch (error) {
         errors.push({
           index: i,
-          error: error instanceof Error ? error.message : 'Error desconocido'
+          error: error instanceof Error ? error.message : 'Error desconocido',
         });
       }
     }
@@ -95,8 +92,7 @@ export class UseKeysService {
       relations: ['user'],
       order: { createdAt: 'DESC' },
     });
-
-    return keys.map(key => this.mapKeyToDto(key));
+    return keys.map((key) => this.mapKeyToDto(key));
   }
 
   async getAvailableKeys() {
@@ -104,10 +100,9 @@ export class UseKeysService {
       where: { used: false },
       order: { createdAt: 'DESC' },
     });
-
     return keys
-      .filter(key => !key.isExpired())
-      .map(key => this.mapKeyToDto(key));
+      .filter((key) => !key.isExpired())
+      .map((key) => this.mapKeyToDto(key));
   }
 
   async getUsedKeys() {
@@ -116,84 +111,54 @@ export class UseKeysService {
       relations: ['user'],
       order: { createdAt: 'DESC' },
     });
-
-    return keys.map(key => this.mapKeyToDto(key));
+    return keys.map((key) => this.mapKeyToDto(key));
   }
 
   async getKeysStats() {
     const allKeys = await this.userKeyRepository.find();
 
-    const stats = {
-      total: allKeys.length,
-      available: 0,
-      used: 0,
-      expired: 0,
-    };
+    const stats = { total: allKeys.length, available: 0, used: 0, expired: 0 };
 
-    allKeys.forEach(key => {
-      if (key.used) {
-        stats.used++;
-      } else if (key.isExpired()) {
-        stats.expired++;
-      } else {
-        stats.available++;
-      }
+    allKeys.forEach((key) => {
+      if (key.used) stats.used++;
+      else if (key.isExpired()) stats.expired++;
+      else stats.available++;
     });
 
     return stats;
   }
 
   async deleteKey(keyValue: string) {
-    const key = await this.userKeyRepository.findOne({
-      where: { keyValue },
-    });
-
-    if (!key) {
-      throw new NotFoundException('Llave no encontrada');
-    }
-
-    if (key.used) {
-      throw new BadRequestException('No se puede eliminar una llave que ya ha sido usada');
-    }
+    const key = await this.userKeyRepository.findOne({ where: { keyValue } });
+    if (!key) throw new NotFoundException('Llave no encontrada');
+    if (key.used) throw new BadRequestException('No se puede eliminar una llave que ya ha sido usada');
 
     await this.userKeyRepository.remove(key);
-
-    return {
-      success: true,
-      message: 'Llave eliminada exitosamente',
-    };
+    return { success: true, message: 'Llave eliminada exitosamente' };
   }
 
   async cleanExpiredKeys() {
-    const now = new Date();
-
     const result = await this.userKeyRepository
       .createQueryBuilder()
       .delete()
       .where('used = :used', { used: false })
-      .andWhere('expires_at < :now', { now })
+      .andWhere('expires_at < :now', { now: new Date() })
       .execute();
 
-    return {
-      success: true,
-      deleted: result.affected || 0,
-    };
+    return { success: true, deleted: result.affected || 0 };
   }
 
   private mapKeyToDto(key: UserKey) {
     let status: 'DISPONIBLE' | 'USADA' | 'EXPIRADA' = 'DISPONIBLE';
-
-    if (key.used) {
-      status = 'USADA';
-    } else if (key.isExpired()) {
-      status = 'EXPIRADA';
-    }
+    if (key.used) status = 'USADA';
+    else if (key.isExpired()) status = 'EXPIRADA';
 
     return {
       keyValue: key.keyValue,
       expiresAt: key.expiresAt,
       status,
       createdAt: key.createdAt,
+      companyId: key.companyId,
       userId: key.userId,
       userEmail: key.user?.email,
       userName: key.user ? `${key.user.firstName} ${key.user.lastName}` : undefined,

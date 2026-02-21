@@ -11,6 +11,7 @@ interface JwtPayload {
   email: string;
   role: number;
   verified: boolean;
+  companyId: number;
 }
 
 @Injectable()
@@ -48,14 +49,14 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     );
   }
 
-  const result = {
-    userId: payload.sub,
+  return {
+    id: payload.sub,        // ← cambiar userId por id
     email: payload.email,
     role: user.role?.name || 'user',
     roleId: payload.role,
     verified: payload.verified,
+    companyId: payload.companyId,
   };
-
-  return result;
 }
+
 }

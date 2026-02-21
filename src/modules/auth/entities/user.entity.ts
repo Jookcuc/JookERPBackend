@@ -21,6 +21,9 @@ export class User {
   @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
+  @Column({ name: 'company_id', nullable: true })
+  companyId: number;
+
   @Column({ name: 'id_role', nullable: true })
   idRole: number;
 

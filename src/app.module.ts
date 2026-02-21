@@ -10,6 +10,8 @@ import { UseKeysModule } from './modules/admin/use-keys.module';
 import { JwtAuthGuard } from './common/guard/jwt-auth.guard';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { InventoryModule } from './modules/Inventory/inventory.module';
+import { InvoicesModule } from './modules/invoices/invoices.module';
+import { CompanyModule } from './modules/company/company.module';
 
 @Module({
   imports: [
@@ -41,7 +43,9 @@ import { InventoryModule } from './modules/Inventory/inventory.module';
     AuthModule,
     EmailModule,
     UseKeysModule,
-    InventoryModule
+    InventoryModule,
+    InvoicesModule,
+    CompanyModule
   ],
   controllers: [AppController],
   providers: [

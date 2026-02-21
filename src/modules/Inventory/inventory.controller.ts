@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Query, Param, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Query, Param, ParseIntPipe, Request } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
 import { CreateProductTypeDto } from './dto/create-product-type.dto';
@@ -20,35 +20,29 @@ export class InventoryController {
   @ApiOperation({ summary: 'Crear categoría' })
   @ApiResponse({ status: 201, description: 'Tipo creado exitosamente' })
   @ApiResponse({ status: 409, description: 'El código ya existe' })
-  createType(@Body() dto: CreateProductTypeDto) {
-    return this.inventoryService.createType(dto);
+  createType(@Body() dto: CreateProductTypeDto, @Request() req) {
+    return this.inventoryService.createType(dto, req.user);
   }
 
   @Get('types')
   @ApiOperation({ summary: 'Listar categorías con filtros' })
   @ApiResponse({ status: 200, description: 'Lista de tipos con totalStock' })
-  findAllTypes(@Query() filters: FilterProductTypeDto) {
-    return this.inventoryService.findAllTypes(filters);
+  findAllTypes(@Query() filters: FilterProductTypeDto, @Request() req) {
+    return this.inventoryService.findAllTypes(filters, req.user);
   }
 
   @Patch('types/:id')
   @ApiOperation({ summary: 'Editar categoría' })
   @ApiParam({ name: 'id', example: 1 })
-  @ApiResponse({ status: 200, description: 'Tipo actualizado' })
-  @ApiResponse({ status: 404, description: 'Tipo no encontrado' })
-  @ApiResponse({ status: 409, description: 'El código ya está en uso' })
-  updateType(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductTypeDto) {
-    return this.inventoryService.updateType(id, dto);
+  updateType(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductTypeDto, @Request() req) {
+    return this.inventoryService.updateType(id, dto, req.user);
   }
 
   @Delete('types/:id')
   @ApiOperation({ summary: 'Eliminar categoría' })
   @ApiParam({ name: 'id', example: 1 })
-  @ApiResponse({ status: 200, description: 'Tipo eliminado' })
-  @ApiResponse({ status: 404, description: 'Tipo no encontrado' })
-  @ApiResponse({ status: 409, description: 'Tiene productos asociados' })
-  removeType(@Param('id', ParseIntPipe) id: number) {
-    return this.inventoryService.removeType(id);
+  removeType(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.inventoryService.removeType(id, req.user);
   }
 
   // ─── PRODUCTOS ───────────────────────────────────────────────
@@ -56,35 +50,28 @@ export class InventoryController {
   @Post('products')
   @ApiOperation({ summary: 'Crear producto' })
   @ApiResponse({ status: 201, description: 'Producto creado exitosamente' })
-  @ApiResponse({ status: 404, description: 'El tipo indicado no existe' })
-  @ApiResponse({ status: 409, description: 'El código ya existe' })
-  createProduct(@Body() dto: CreateProductDto) {
-    return this.inventoryService.createProduct(dto);
+  createProduct(@Body() dto: CreateProductDto, @Request() req) {
+    return this.inventoryService.createProduct(dto, req.user);
   }
 
   @Get('products')
   @ApiOperation({ summary: 'Listar productos + KPIs' })
   @ApiResponse({ status: 200, description: 'Lista de productos y cards del inventario' })
-  findAllProducts(@Query() filters: FilterProductDto) {
-    return this.inventoryService.findAllProducts(filters);
+  findAllProducts(@Query() filters: FilterProductDto, @Request() req) {
+    return this.inventoryService.findAllProducts(filters, req.user);
   }
 
   @Patch('products/:id')
   @ApiOperation({ summary: 'Editar producto' })
   @ApiParam({ name: 'id', example: 1 })
-  @ApiResponse({ status: 200, description: 'Producto actualizado' })
-  @ApiResponse({ status: 404, description: 'Producto o tipo no encontrado' })
-  @ApiResponse({ status: 409, description: 'El código ya está en uso' })
-  updateProduct(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductDto) {
-    return this.inventoryService.updateProduct(id, dto);
+  updateProduct(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductDto, @Request() req) {
+    return this.inventoryService.updateProduct(id, dto, req.user);
   }
 
   @Delete('products/:id')
   @ApiOperation({ summary: 'Eliminar producto' })
   @ApiParam({ name: 'id', example: 1 })
-  @ApiResponse({ status: 200, description: 'Producto eliminado' })
-  @ApiResponse({ status: 404, description: 'Producto no encontrado' })
-  removeProduct(@Param('id', ParseIntPipe) id: number) {
-    return this.inventoryService.removeProduct(id);
+  removeProduct(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.inventoryService.removeProduct(id, req.user);
   }
 }

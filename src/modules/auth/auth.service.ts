@@ -33,11 +33,11 @@ export class AuthService {
     private jwtService: JwtService,
     private emailService: EmailService,
     private configService: ConfigService,
-  ) { }
+  ) {}
 
   async register(registerDto: RegisterDto) {
-    const { firstName, lastName, email, password, confirmPassword, useKey } =
-      registerDto;
+    const { firstName, lastName, email, password, confirmPassword, useKey } = registerDto;
+
     if (password !== confirmPassword) {
       throw new BadRequestException('Las contraseñas no coinciden');
     }
@@ -50,6 +50,7 @@ export class AuthService {
       throw new ConflictException('El email ya está registrado');
     }
 
+    // Buscar la llave y validarla
     const userKey = await this.userKeyRepository.findOne({
       where: { keyValue: useKey, used: false },
     });
@@ -58,21 +59,25 @@ export class AuthService {
       throw new BadRequestException('Llave de uso inválida o ya utilizada');
     }
 
+    if (!userKey.companyId) {
+      throw new BadRequestException('La llave no tiene empresa asociada');
+    }
+
     if (userKey.expiresAt && new Date() > userKey.expiresAt) {
       throw new BadRequestException('La llave de uso ha expirado');
     }
 
-
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Crear el usuario
+    // Crear el usuario heredando companyId de la llave
     const user = this.userRepository.create({
       firstName,
       lastName,
       email: email.toLowerCase(),
       password: hashedPassword,
       emailVerified: false,
-      idRole: 1, // Role por defecto: usuario estándar (ajusta según tu lógica)
+      idRole: 1,
+      companyId: userKey.companyId,  // ← heredado de la llave
     });
 
     const savedUser = await this.userRepository.save(user);
@@ -95,7 +100,7 @@ export class AuthService {
       );
     } catch (error) {
       this.logger.error('Error enviando email de verificación:', error);
-      // Eliminar usuario si no se puede enviar el email
+      // Revertir si no se puede enviar el email
       await this.userRepository.delete(savedUser.id);
       await this.userKeyRepository.update(userKey.idKey, { used: false });
       throw new BadRequestException(
@@ -105,24 +110,19 @@ export class AuthService {
 
     return {
       success: true,
-      message:
-        'Usuario registrado exitosamente. Por favor verifica tu email para continuar.',
+      message: 'Usuario registrado exitosamente. Por favor verifica tu email para continuar.',
       data: {
         email: savedUser.email,
         userId: savedUser.id,
+        companyId: savedUser.companyId,
         codeExpiresInSeconds: 90,
       },
     };
   }
 
-  /**
-   * Verifica el email del usuario con el código recibido
-   * Genera token JWT y API Key al verificar exitosamente
-   */
   async verifyEmail(verifyEmailDto: VerifyEmailDto) {
     const { code, email } = verifyEmailDto;
 
-    // Buscar el usuario
     const user = await this.userRepository.findOne({
       where: { email: email.toLowerCase() },
     });
@@ -135,7 +135,6 @@ export class AuthService {
       throw new BadRequestException('El email ya ha sido verificado');
     }
 
-    // Buscar el código de verificación válido
     const verificationCode = await this.verificationCodeRepository.findOne({
       where: {
         userId: user.id,
@@ -143,9 +142,7 @@ export class AuthService {
         used: false,
         expiresAt: MoreThan(new Date()),
       },
-      order: {
-        createdAt: 'DESC',
-      },
+      order: { createdAt: 'DESC' },
     });
 
     if (!verificationCode) {
@@ -154,24 +151,18 @@ export class AuthService {
       );
     }
 
-    // Marcar el código como usado
     verificationCode.used = true;
     await this.verificationCodeRepository.save(verificationCode);
 
-    // Marcar el email como verificado
     user.emailVerified = true;
     user.updatedAt = new Date();
     await this.userRepository.save(user);
 
     this.logger.log(`Email verificado: ${user.email}`);
 
-    // Generar token JWT
     const token = await this.generateToken(user);
-
-    // Generar API Key única para el usuario
     const apiKey = await this.generateApiKey(user.id);
 
-    // Enviar email de bienvenida (opcional, no bloqueante)
     this.emailService.sendWelcomeEmail(user.email, user.firstName).catch((err) => {
       this.logger.error('Error enviando email de bienvenida:', err);
     });
@@ -187,20 +178,16 @@ export class AuthService {
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
+          companyId: user.companyId,
           emailVerified: user.emailVerified,
         },
       },
     };
   }
 
-  /**
-   * Inicia sesión con email y contraseña
-   * Requiere que el email esté verificado
-   */
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
-    // Buscar usuario con su role
     const user = await this.userRepository.findOne({
       where: { email: email.toLowerCase() },
       relations: ['role'],
@@ -210,13 +197,11 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // Verificar contraseña
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    // Verificar si el email está verificado
     if (!user.emailVerified) {
       throw new UnauthorizedException(
         'Por favor verifica tu email antes de iniciar sesión. Revisa tu bandeja de entrada.',
@@ -225,10 +210,8 @@ export class AuthService {
 
     this.logger.log(`Login exitoso: ${user.email}`);
 
-    // Generar token
     const token = await this.generateToken(user);
 
-    // Obtener API Key del usuario
     const apiKey = await this.userKeyRepository.findOne({
       where: { userId: user.id, used: true },
       order: { createdAt: 'DESC' },
@@ -246,16 +229,13 @@ export class AuthService {
           lastName: user.lastName,
           email: user.email,
           role: user.role?.name || 'user',
+          companyId: user.companyId,
           emailVerified: user.emailVerified,
         },
       },
     };
   }
 
-  /**
-   * Reenvía el código de verificación al usuario
-   * Invalida códigos anteriores y genera uno nuevo
-   */
   async resendVerificationCode(email: string) {
     const user = await this.userRepository.findOne({
       where: { email: email.toLowerCase() },
@@ -269,16 +249,13 @@ export class AuthService {
       throw new BadRequestException('El email ya ha sido verificado');
     }
 
-    // Invalidar códigos anteriores no usados
     await this.verificationCodeRepository.update(
       { userId: user.id, used: false },
       { used: true },
     );
 
-    // Generar nuevo código
     const verificationCode = await this.generateVerificationCode(user.id);
 
-    // Enviar email
     try {
       await this.emailService.sendVerificationEmail(
         user.email,
@@ -304,68 +281,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Genera un código de verificación de 6 dígitos
-   * Válido por 90 segundos
-   */
-  private async generateVerificationCode(
-    userId: number,
-  ): Promise<EmailVerificationCode> {
-    // Generar código de 6 dígitos
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Calcular tiempo de expiración (90 segundos)
-    const expirySeconds = this.configService.get<number>(
-      'VERIFICATION_CODE_EXPIRY_SECONDS',
-      90,
-    );
-    const expiresAt = new Date();
-    expiresAt.setSeconds(expiresAt.getSeconds() + expirySeconds);
-
-    const verificationCode = this.verificationCodeRepository.create({
-      userId,
-      code,
-      expiresAt,
-    });
-
-    return await this.verificationCodeRepository.save(verificationCode);
-  }
-
-  /**
-   * Genera un JWT token para el usuario
-   */
-  private async generateToken(user: User): Promise<string> {
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.idRole,
-      verified: user.emailVerified,
-    };
-    const secret = this.configService.get<string>('JWT_SECRET');
-
-    return this.jwtService.sign(payload);
-  }
-
-  /**
-   * Genera una API Key única para el usuario
-   * Formato: jk_[64 caracteres hexadecimales]
-   */
-  private async generateApiKey(userId: number): Promise<UserKey> {
-    // Generar API Key única con prefijo
-    const apiKey = `jk_${crypto.randomBytes(32).toString('hex')}`;
-
-    const userKey = this.userKeyRepository.create({
-      keyValue: apiKey,
-      userId,
-      used: true,
-    });
-
-    return await this.userKeyRepository.save(userKey);
-  }
-
-  /**
-   * Valida el token JWT y retorna el usuario
-   */
   async validateUser(userId: number): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -383,10 +298,6 @@ export class AuthService {
     return user;
   }
 
-  /**
-   * Limpia códigos de verificación expirados
-   * Ejecutar periódicamente con un cron job
-   */
   async cleanExpiredCodes(): Promise<number> {
     const result = await this.verificationCodeRepository.delete({
       expiresAt: MoreThan(new Date()),
@@ -397,9 +308,6 @@ export class AuthService {
     return deletedCount;
   }
 
-  /**
-   * Obtiene el perfil del usuario autenticado
-   */
   async getProfile(userId: number) {
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -410,7 +318,6 @@ export class AuthService {
       throw new BadRequestException('Usuario no encontrado');
     }
 
-    // Obtener API Key
     const apiKey = await this.userKeyRepository.findOne({
       where: { userId: user.id, used: true },
       order: { createdAt: 'DESC' },
@@ -422,9 +329,52 @@ export class AuthService {
       lastName: user.lastName,
       email: user.email,
       role: user.role?.name || 'user',
+      companyId: user.companyId,
       emailVerified: user.emailVerified,
       apiKey: apiKey?.keyValue,
       createdAt: user.createdAt,
     };
+  }
+
+  // ─── MÉTODOS PRIVADOS ────────────────────────────────────────
+
+  private async generateVerificationCode(userId: number): Promise<EmailVerificationCode> {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const expirySeconds = this.configService.get<number>('VERIFICATION_CODE_EXPIRY_SECONDS', 90);
+    const expiresAt = new Date();
+    expiresAt.setSeconds(expiresAt.getSeconds() + expirySeconds);
+
+    const verificationCode = this.verificationCodeRepository.create({
+      userId,
+      code,
+      expiresAt,
+    });
+
+    return this.verificationCodeRepository.save(verificationCode);
+  }
+
+  private async generateToken(user: User): Promise<string> {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.idRole,
+      companyId: user.companyId,  // ← incluido en el JWT
+      verified: user.emailVerified,
+    };
+
+    return this.jwtService.sign(payload);
+  }
+
+  private async generateApiKey(userId: number): Promise<UserKey> {
+    const apiKey = `jk_${crypto.randomBytes(32).toString('hex')}`;
+
+    const userKey = this.userKeyRepository.create({
+      keyValue: apiKey,
+      userId,
+      used: true,
+    });
+
+    return this.userKeyRepository.save(userKey);
   }
 }

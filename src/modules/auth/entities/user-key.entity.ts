@@ -25,6 +25,9 @@ export class UserKey {
   @Column({ name: 'user_id', nullable: true })
   userId: number;
 
+  @Column({ name: 'company_id', nullable: true })
+companyId: number;
+
   @Column({ type: 'boolean', default: false })
   used: boolean;
 

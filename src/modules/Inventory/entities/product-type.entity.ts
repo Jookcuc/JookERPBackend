@@ -6,7 +6,13 @@ export class ProductType {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 50, unique: true })
+  @Column({ name: 'company_id' })
+  companyId: number;
+
+  @Column({ name: 'user_id' })
+  userId: number;
+
+  @Column({ length: 50 })
   code: string;
 
   @Column({ length: 255 })
