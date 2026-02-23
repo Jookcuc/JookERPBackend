@@ -31,6 +31,13 @@ export class InventoryController {
     return this.inventoryService.findAllTypes(filters, req.user);
   }
 
+  @Get('types-list')
+  @ApiOperation({ summary: 'Listar categorías (solo id y name) sin paginación' })
+  @ApiResponse({ status: 200, description: 'Lista simple de tipos' })
+  findAllTypesList(@Request() req) {
+    return this.inventoryService.findAllTypesList(req.user);
+  }
+
   @Patch('types/:id')
   @ApiOperation({ summary: 'Editar categoría' })
   @ApiParam({ name: 'id', example: 1 })

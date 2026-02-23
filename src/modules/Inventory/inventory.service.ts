@@ -69,6 +69,17 @@ export class InventoryService {
     return { data: mapped, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
+  async findAllTypesList(user: any) {
+    const where: any = { companyId: user.companyId };
+    if (user.role === 2) where.userId = user.id;
+
+    return this.typeRepo.find({
+      where,
+      select: ['id', 'name'],
+      order: { name: 'ASC' },
+    });
+  }
+
   async updateType(id: number, dto: UpdateProductTypeDto, user: any): Promise<ProductType> {
     const type = await this.typeRepo.findOne({ where: { id, companyId: user.companyId } });
     if (!type) throw new NotFoundException(`Tipo con id ${id} no encontrado`);
