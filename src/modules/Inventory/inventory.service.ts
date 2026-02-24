@@ -158,6 +158,18 @@ export class InventoryService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit), kpis };
   }
 
+  async findOneProduct(id: number, user: any): Promise<Product> {
+    const where: any = { id, companyId: user.companyId };
+    if (user.role === 2) where.userId = user.id;
+
+    const product = await this.productRepo.findOne({
+      where,
+      relations: ['type'],
+    });
+    if (!product) throw new NotFoundException(`Producto con id ${id} no encontrado`);
+    return product;
+  }
+
   async updateProduct(id: number, dto: UpdateProductDto, user: any): Promise<Product> {
     const product = await this.productRepo.findOne({
       where: { id, companyId: user.companyId },

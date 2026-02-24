@@ -68,6 +68,15 @@ export class InventoryController {
     return this.inventoryService.findAllProducts(filters, req.user);
   }
 
+  @Get('products/:id')
+  @ApiOperation({ summary: 'Obtener detalle de un producto' })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiResponse({ status: 200, description: 'Detalle del producto' })
+  @ApiResponse({ status: 404, description: 'Producto no encontrado' })
+  findOneProduct(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.inventoryService.findOneProduct(id, req.user);
+  }
+
   @Patch('products/:id')
   @ApiOperation({ summary: 'Editar producto' })
   @ApiParam({ name: 'id', example: 1 })
