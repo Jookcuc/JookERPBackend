@@ -12,6 +12,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { InventoryModule } from './modules/Inventory/inventory.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { CompanyModule } from './modules/company/company.module';
+import { S3Module } from './modules/s3/s3.module';
 
 @Module({
   imports: [
@@ -32,10 +33,12 @@ import { CompanyModule } from './modules/company/company.module';
           password: configService.get<string>('DB_PASSWORD')?.trim(),
           database: configService.get<string>('DB_NAME'),
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: configService.get<boolean>('DATABASE_SYNCHRONIZE', false),
+          synchronize: configService.get<boolean>(
+            'DATABASE_SYNCHRONIZE',
+            false,
+          ),
           logging: configService.get<string>('NODE_ENV') === 'development',
-          ssl:
-             { rejectUnauthorized: false, sslmode: 'require' }
+          ssl: { rejectUnauthorized: false, sslmode: 'require' },
         };
       },
     }),
@@ -45,7 +48,8 @@ import { CompanyModule } from './modules/company/company.module';
     UseKeysModule,
     InventoryModule,
     InvoicesModule,
-    CompanyModule
+    CompanyModule,
+    S3Module,
   ],
   controllers: [AppController],
   providers: [
@@ -60,4 +64,4 @@ import { CompanyModule } from './modules/company/company.module';
     },
   ],
 })
-export class AppModule { }
+export class AppModule {}
