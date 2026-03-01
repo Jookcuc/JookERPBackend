@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Contact } from './contact.entity';
 import { InvoiceItem } from './invoice-item.entity';
+import { Bank } from '../../banks/entities/bank.entity';
 
 export enum InvoiceType {
   COMPRA = 'COMPRA',
@@ -64,4 +65,11 @@ export class Invoice {
 
   @OneToMany(() => InvoiceItem, (item) => item.invoice, { cascade: true, eager: true })
   items: InvoiceItem[];
+
+  @ManyToOne(() => Bank, bank => bank.invoices, { nullable: true })
+  @JoinColumn({ name: 'bank_id' })
+  bank: Bank;
+
+  @Column({ name: 'bank_id', nullable: true })
+  bankId: number;
 }

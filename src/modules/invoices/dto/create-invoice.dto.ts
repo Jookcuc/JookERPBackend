@@ -34,6 +34,11 @@ export class CreateInvoiceDto {
   @IsInt()
   contactId: number;
 
+  @ApiPropertyOptional({ example: 1, description: 'ID del banco a usar para la transacción generada' })
+  @IsOptional()
+  @IsInt()
+  bankId?: number;
+
   @ApiProperty({ example: '2025-07-10' })
   @IsDateString()
   issueDate: string;

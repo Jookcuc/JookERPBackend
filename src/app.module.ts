@@ -13,6 +13,8 @@ import { InventoryModule } from './modules/Inventory/inventory.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { CompanyModule } from './modules/company/company.module';
 import { S3Module } from './modules/s3/s3.module';
+import { BanksModule } from './modules/banks/banks.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { S3Module } from './modules/s3/s3.module';
     InvoicesModule,
     CompanyModule,
     S3Module,
+    BanksModule,
+    TransactionsModule,
   ],
   controllers: [AppController],
   providers: [

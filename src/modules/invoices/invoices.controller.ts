@@ -46,27 +46,6 @@ export class InvoicesController {
     return this.invoicesService.getCalendar(req.user, invoiceType, startDate, endDate);
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Obtener factura por ID' })
-  @ApiParam({ name: 'id', example: 1 })
-  findOne(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.invoicesService.findOne(id, req.user);
-  }
-
-  @Patch(':id')
-  @ApiOperation({ summary: 'Editar factura' })
-  @ApiParam({ name: 'id', example: 1 })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateInvoiceDto, @Request() req) {
-    return this.invoicesService.update(id, dto, req.user);
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: 'Eliminar factura' })
-  @ApiParam({ name: 'id', example: 1 })
-  remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.invoicesService.remove(id, req.user);
-  }
-
   // ─── CONTACTOS ───────────────────────────────────────────────
 
   @Post('contacts')
@@ -94,4 +73,29 @@ export class InvoicesController {
   removeContact(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.invoicesService.removeContact(id, req.user);
   }
+
+  // ─── FACTURAS (ID based routes) ───────────────────────────────
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Obtener factura por ID' })
+  @ApiParam({ name: 'id', example: 1 })
+  findOne(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.invoicesService.findOne(id, req.user);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Editar factura' })
+  @ApiParam({ name: 'id', example: 1 })
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateInvoiceDto, @Request() req) {
+    return this.invoicesService.update(id, dto, req.user);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Eliminar factura' })
+  @ApiParam({ name: 'id', example: 1 })
+  remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.invoicesService.remove(id, req.user);
+  }
+
+
 }

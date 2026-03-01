@@ -12,6 +12,9 @@ import { FilterInvoiceDto } from './dto/filter-invoice.dto';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
 import { FilterContactDto } from './dto/filter-contact.dto';
+import { TransactionsService } from '../transactions/transactions.service';
+import { MovementType as TxMovementType } from '../transactions/entities/transaction.entity';
+
 
 @Injectable()
 export class InvoicesService {
@@ -26,6 +29,7 @@ export class InvoicesService {
     private readonly productRepo: Repository<Product>,
     @InjectRepository(InventoryMovement)
     private readonly movementRepo: Repository<InventoryMovement>,
+    private readonly transactionsService: TransactionsService,
   ) { }
 
   // ─── FACTURAS ────────────────────────────────────────────────
@@ -97,6 +101,18 @@ export class InvoicesService {
         }),
       );
     }
+
+    // Crear transacción
+    const txType = dto.invoiceType === InvoiceType.VENTA ? TxMovementType.ENTRADA : TxMovementType.SALIDA;
+    const txCategory = dto.invoiceType === InvoiceType.VENTA ? 'Venta' : 'Compra';
+    await this.transactionsService.createFromInvoice(
+      saved, 
+      user, 
+      txType, 
+      totalAmount, 
+      dto.bankId, 
+      txCategory
+    );
 
     return saved;
   }
