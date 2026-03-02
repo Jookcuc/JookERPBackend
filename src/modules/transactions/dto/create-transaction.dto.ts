@@ -39,5 +39,5 @@ export class CreateTransactionDto {
   @ApiProperty({ example: '2025-10-07' })
   @IsNotEmpty()
   @IsDateString()
-  date: Date;
+  date: string;
 }
