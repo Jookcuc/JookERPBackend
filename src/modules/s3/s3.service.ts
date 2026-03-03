@@ -4,8 +4,19 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+interface UploadFileParams {
+  key: string;
+  body: Buffer;
+  contentType: string;
+  contentDisposition?: string;
+}
 
 @Injectable()
 export class S3Service {
@@ -25,8 +36,9 @@ export class S3Service {
       region: this.region,
       credentials: {
         accessKeyId: this.configService.get<string>('AWS_ACCESS_KEY_ID')!,
-        secretAccessKey:
-          this.configService.get<string>('AWS_SECRET_ACCESS_KEY')!,
+        secretAccessKey: this.configService.get<string>(
+          'AWS_SECRET_ACCESS_KEY',
+        )!,
       },
     });
   }
@@ -34,11 +46,14 @@ export class S3Service {
   async generatePresignedUrl(
     filename: string,
     contentType: string,
+    directory = 'images',
   ): Promise<{ uploadUrl: string; imageUrl: string }> {
     try {
       const timestamp = Date.now();
       const sanitizedFilename = filename.replace(/\s+/g, '-').toLowerCase();
-      const key = `images/${timestamp}-${sanitizedFilename}`;
+      const normalizedDirectory =
+        directory.trim().replace(/^\/+|\/+$/g, '') || 'images';
+      const key = `${normalizedDirectory}/${timestamp}-${sanitizedFilename}`;
 
       const command = new PutObjectCommand({
         Bucket: this.bucket,
@@ -47,22 +62,99 @@ export class S3Service {
       });
 
       const uploadUrl = await getSignedUrl(this.s3Client, command, {
-        expiresIn: 300, // 5 minutos
+        expiresIn: 300,
       });
 
-      const imageUrl = `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
+      const imageUrl = this.buildFileUrl(key);
 
       this.logger.log(`Presigned URL generada para: ${key}`);
 
       return { uploadUrl, imageUrl };
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(
-        `Error generando presigned URL: ${error.message}`,
-        error.stack,
+        `Error generando presigned URL: ${this.getErrorMessage(error)}`,
+        this.getErrorStack(error),
       );
       throw new InternalServerErrorException(
         'No se pudo generar la URL de subida',
       );
     }
+  }
+
+  async uploadFile({
+    key,
+    body,
+    contentType,
+    contentDisposition,
+  }: UploadFileParams): Promise<{ key: string; fileUrl: string }> {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+        ContentDisposition: contentDisposition,
+      });
+
+      await this.s3Client.send(command);
+
+      this.logger.log(`Archivo subido a S3: ${key}`);
+
+      return {
+        key,
+        fileUrl: this.buildFileUrl(key),
+      };
+    } catch (error: unknown) {
+      this.logger.error(
+        `Error subiendo archivo a S3: ${this.getErrorMessage(error)}`,
+        this.getErrorStack(error),
+      );
+      throw new InternalServerErrorException(
+        'No se pudo subir el archivo a S3',
+      );
+    }
+  }
+
+  async generateDownloadUrl(
+    key: string,
+    filename: string,
+    expiresIn = 3600,
+  ): Promise<{ downloadUrl: string; expiresAt: string }> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        ResponseContentDisposition: `attachment; filename="${filename}"`,
+      });
+
+      const downloadUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn,
+      });
+
+      return {
+        downloadUrl,
+        expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
+      };
+    } catch (error: unknown) {
+      this.logger.error(
+        `Error generando download URL: ${this.getErrorMessage(error)}`,
+        this.getErrorStack(error),
+      );
+      throw new InternalServerErrorException(
+        'No se pudo generar la URL de descarga',
+      );
+    }
+  }
+
+  private buildFileUrl(key: string): string {
+    return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : 'Unknown error';
+  }
+
+  private getErrorStack(error: unknown): string | undefined {
+    return error instanceof Error ? error.stack : undefined;
   }
 }

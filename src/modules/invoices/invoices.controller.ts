@@ -1,13 +1,35 @@
-import { Controller, Get, Post, Patch, Delete, Body, Query, Param, ParseIntPipe, Request } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
-import { InvoicesService } from './invoices.service';
-import { CreateInvoiceDto } from './dto/create-invoice.dto';
-import { UpdateInvoiceDto } from './dto/update-invoice.dto';
-import { FilterInvoiceDto } from './dto/filter-invoice.dto';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post,
+  Query,
+  Request,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CreateContactDto } from './dto/create-contact.dto';
-import { UpdateContactDto } from './dto/update-contact.dto';
+import { CreatePurchaseInvoiceDto } from './dto/create-purchase-invoice.dto';
+import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
 import { FilterContactDto } from './dto/filter-contact.dto';
+import { FilterInvoiceDto } from './dto/filter-invoice.dto';
+import { UpdateContactDto } from './dto/update-contact.dto';
+import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { InvoiceType } from './entities/invoice.entity';
+import {
+  InvoicesService,
+  type SalesInvoicePdfResponse,
+} from './invoices.service';
 
 @ApiTags('Invoices')
 @ApiBearerAuth('JWT-auth')
@@ -15,21 +37,51 @@ import { InvoiceType } from './entities/invoice.entity';
 export class InvoicesController {
   constructor(private readonly invoicesService: InvoicesService) {}
 
-  // ─── FACTURAS ────────────────────────────────────────────────
-
-  @Post()
-  @ApiOperation({ summary: 'Crear factura de compra o venta' })
-  @ApiResponse({ status: 201, description: 'Factura creada, stock actualizado automáticamente' })
+  @Post('sales')
+  @ApiOperation({ summary: 'Crear factura de venta' })
+  @ApiResponse({
+    status: 201,
+    description: 'Factura de venta creada y stock actualizado automaticamente',
+  })
   @ApiResponse({ status: 400, description: 'Stock insuficiente' })
-  @ApiResponse({ status: 409, description: 'Número de factura duplicado' })
-  create(@Body() dto: CreateInvoiceDto, @Request() req) {
-    return this.invoicesService.create(dto, req.user);
+  @ApiResponse({ status: 409, description: 'Numero de factura duplicado' })
+  createSales(@Body() dto: CreateSalesInvoiceDto, @Request() req) {
+    return this.invoicesService.createSales(dto, req.user);
+  }
+
+  @Post('purchases')
+  @ApiOperation({ summary: 'Crear factura de compra' })
+  @ApiResponse({
+    status: 201,
+    description: 'Factura de compra creada y stock actualizado automaticamente',
+  })
+  @ApiResponse({ status: 409, description: 'Numero de factura duplicado' })
+  createPurchase(@Body() dto: CreatePurchaseInvoiceDto, @Request() req) {
+    return this.invoicesService.createPurchase(dto, req.user);
   }
 
   @Get()
   @ApiOperation({ summary: 'Listar facturas con filtros' })
   findAll(@Query() filters: FilterInvoiceDto, @Request() req) {
     return this.invoicesService.findAll(filters, req.user);
+  }
+
+  @Get('sales')
+  @ApiOperation({ summary: 'Listar facturas de venta' })
+  findSales(@Query() filters: FilterInvoiceDto, @Request() req) {
+    return this.invoicesService.findAll(
+      { ...filters, invoiceType: InvoiceType.VENTA },
+      req.user,
+    );
+  }
+
+  @Get('purchases')
+  @ApiOperation({ summary: 'Listar facturas de compra' })
+  findPurchases(@Query() filters: FilterInvoiceDto, @Request() req) {
+    return this.invoicesService.findAll(
+      { ...filters, invoiceType: InvoiceType.COMPRA },
+      req.user,
+    );
   }
 
   @Get('calendar')
@@ -43,10 +95,13 @@ export class InvoicesController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.invoicesService.getCalendar(req.user, invoiceType, startDate, endDate);
+    return this.invoicesService.getCalendar(
+      req.user,
+      invoiceType,
+      startDate,
+      endDate,
+    );
   }
-
-  // ─── CONTACTOS ───────────────────────────────────────────────
 
   @Post('contacts')
   @ApiOperation({ summary: 'Crear proveedor o cliente' })
@@ -63,7 +118,11 @@ export class InvoicesController {
   @Patch('contacts/:id')
   @ApiOperation({ summary: 'Editar contacto' })
   @ApiParam({ name: 'id', example: 1 })
-  updateContact(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateContactDto, @Request() req) {
+  updateContact(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateContactDto,
+    @Request() req,
+  ) {
     return this.invoicesService.updateContact(id, dto, req.user);
   }
 
@@ -74,7 +133,22 @@ export class InvoicesController {
     return this.invoicesService.removeContact(id, req.user);
   }
 
-  // ─── FACTURAS (ID based routes) ───────────────────────────────
+  @Get(':id/download-pdf')
+  @ApiOperation({
+    summary:
+      'Generar PDF de una factura de venta, guardarlo en S3 y retornar URL de descarga',
+  })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiResponse({
+    status: 200,
+    description: 'Retorna la URL firmada para descargar el PDF de la factura',
+  })
+  downloadSalesInvoicePdf(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+  ): Promise<SalesInvoicePdfResponse> {
+    return this.invoicesService.downloadSalesInvoicePdf(id, req.user);
+  }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener factura por ID' })
@@ -86,7 +160,11 @@ export class InvoicesController {
   @Patch(':id')
   @ApiOperation({ summary: 'Editar factura' })
   @ApiParam({ name: 'id', example: 1 })
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateInvoiceDto, @Request() req) {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateInvoiceDto,
+    @Request() req,
+  ) {
     return this.invoicesService.update(id, dto, req.user);
   }
 
@@ -96,6 +174,4 @@ export class InvoicesController {
   remove(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.invoicesService.remove(id, req.user);
   }
-
-
 }

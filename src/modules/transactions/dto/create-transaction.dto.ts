@@ -1,5 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsNumber, IsOptional, IsDateString, MaxLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
+import { MovementType } from '../entities/transaction.entity';
 
 export class CreateTransactionDto {
   @ApiProperty({ example: 'AJ-001' })
@@ -14,7 +23,7 @@ export class CreateTransactionDto {
   @MaxLength(100)
   category: string;
 
-  @ApiProperty({ example: 100.50 })
+  @ApiProperty({ example: 100.5 })
   @IsNotEmpty()
   @IsNumber()
   amount: number;
@@ -30,11 +39,11 @@ export class CreateTransactionDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 'Ajuste' })
+  @ApiProperty({ example: MovementType.AJUSTE, enum: MovementType })
   @IsNotEmpty()
-  @IsString()
+  @IsEnum(MovementType)
   @MaxLength(50)
-  movement: string;
+  movement: MovementType;
 
   @ApiProperty({ example: '2025-10-07' })
   @IsNotEmpty()

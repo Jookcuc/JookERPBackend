@@ -1,4 +1,15 @@
-import { IsString, IsNotEmpty, IsNumber, IsEnum, IsOptional, IsDateString, IsArray, ValidateNested, IsInt, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsEnum,
+  IsOptional,
+  IsDateString,
+  IsArray,
+  ValidateNested,
+  IsInt,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { InvoiceType, InvoiceStatus } from '../entities/invoice.entity';
@@ -46,6 +57,12 @@ export class CreateInvoiceDto {
   @ApiProperty({ example: '2025-08-10', description: 'Fecha de vencimiento' })
   @IsDateString()
   dueDate: string;
+
+  @ApiProperty({ example: 250000, description: 'Monto total de la factura' })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  totalAmount: number;
 
   @ApiPropertyOptional({ enum: InvoiceStatus, example: InvoiceStatus.PENDIENTE })
   @IsOptional()

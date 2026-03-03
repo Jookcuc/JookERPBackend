@@ -8,11 +8,23 @@ import { Contact } from './entities/contact.entity';
 import { Product } from '../Inventory/entities/product.entity';
 import { InventoryMovement } from '../Inventory/entities/inventory-movement.entity';
 import { TransactionsModule } from '../transactions/transactions.module';
+import { S3Module } from '../s3/s3.module';
+import { Company } from '../company/entities/company.entity';
+import { Bank } from '../banks/entities/bank.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Invoice, InvoiceItem, Contact, Product, InventoryMovement]),
+    TypeOrmModule.forFeature([
+      Invoice,
+      InvoiceItem,
+      Contact,
+      Product,
+      InventoryMovement,
+      Company,
+      Bank,
+    ]),
     TransactionsModule,
+    S3Module,
   ],
   controllers: [InvoicesController],
   providers: [InvoicesService],
