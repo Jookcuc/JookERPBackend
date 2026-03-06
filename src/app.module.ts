@@ -15,6 +15,7 @@ import { CompanyModule } from './modules/company/company.module';
 import { S3Module } from './modules/s3/s3.module';
 import { BanksModule } from './modules/banks/banks.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
     S3Module,
     BanksModule,
     TransactionsModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [
