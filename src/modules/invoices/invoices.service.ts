@@ -564,6 +564,34 @@ export class InvoicesService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
+  async findAllClientContactsList(
+    user: any,
+  ): Promise<Array<Pick<Contact, 'id' | 'name'>>> {
+    return this.findContactsListByType(ContactType.CLIENTE, user);
+  }
+
+  async findAllSupplierContactsList(
+    user: any,
+  ): Promise<Array<Pick<Contact, 'id' | 'name'>>> {
+    return this.findContactsListByType(ContactType.PROVEEDOR, user);
+  }
+
+  private async findContactsListByType(
+    type: ContactType,
+    user: any,
+  ): Promise<Array<Pick<Contact, 'id' | 'name'>>> {
+    const where: any = { companyId: user.companyId, type };
+    if (user.role === 2) {
+      where.userId = user.id;
+    }
+
+    return this.contactRepo.find({
+      where,
+      select: ['id', 'name'],
+      order: { name: 'ASC' },
+    });
+  }
+
   async updateContact(
     id: number,
     dto: UpdateContactDto,

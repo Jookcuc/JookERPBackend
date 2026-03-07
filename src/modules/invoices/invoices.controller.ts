@@ -102,6 +102,22 @@ export class InvoicesController {
     return this.invoicesService.findAllContacts(filters, req.user);
   }
 
+  @Get('contacts/clients')
+  @ApiOperation({ summary: 'Listar clientes (solo id y name) sin paginacion' })
+  @ApiResponse({ status: 200, description: 'Lista simple de clientes' })
+  findAllClientContactsList(@Request() req) {
+    return this.invoicesService.findAllClientContactsList(req.user);
+  }
+
+  @Get('contacts/suppliers')
+  @ApiOperation({
+    summary: 'Listar proveedores (solo id y name) sin paginacion',
+  })
+  @ApiResponse({ status: 200, description: 'Lista simple de proveedores' })
+  findAllSupplierContactsList(@Request() req) {
+    return this.invoicesService.findAllSupplierContactsList(req.user);
+  }
+
   @Patch('contacts/:id')
   @ApiOperation({ summary: 'Editar contacto' })
   @ApiParam({ name: 'id', example: 1 })
