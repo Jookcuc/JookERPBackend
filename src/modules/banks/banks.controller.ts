@@ -24,6 +24,13 @@ export class BanksController {
     return this.banksService.findAll(filters, req.user);
   }
 
+  @Get('list')
+  @ApiOperation({ summary: 'Listar bancos (solo id y name) sin paginacion' })
+  @ApiResponse({ status: 200, description: 'Lista simple de bancos' })
+  findAllList(@Request() req) {
+    return this.banksService.findAllList(req.user);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener banco por ID' })
   @ApiParam({ name: 'id', example: 1 })

@@ -42,6 +42,17 @@ export class BanksService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
+  async findAllList(user: any): Promise<Array<Pick<Bank, 'id' | 'name'>>> {
+    const where: any = { companyId: user.companyId };
+    if (user.role === 2) where.userId = user.id;
+
+    return this.bankRepo.find({
+      where,
+      select: ['id', 'name'],
+      order: { name: 'ASC' },
+    });
+  }
+
   async findOne(id: number, user: any): Promise<Bank> {
     const bank = await this.bankRepo.findOne({
       where: { id, companyId: user.companyId },

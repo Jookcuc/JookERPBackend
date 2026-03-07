@@ -14,10 +14,10 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
-  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { CalendarInvoiceFilterDto } from './dto/calendar-invoice-filter.dto';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { CreatePurchaseInvoiceDto } from './dto/create-purchase-invoice.dto';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
@@ -86,21 +86,8 @@ export class InvoicesController {
 
   @Get('calendar')
   @ApiOperation({ summary: 'Calendario de vencimientos' })
-  @ApiQuery({ name: 'invoiceType', enum: InvoiceType, required: false })
-  @ApiQuery({ name: 'startDate', required: false, example: '2025-07-01' })
-  @ApiQuery({ name: 'endDate', required: false, example: '2025-07-31' })
-  getCalendar(
-    @Request() req,
-    @Query('invoiceType') invoiceType?: InvoiceType,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    return this.invoicesService.getCalendar(
-      req.user,
-      invoiceType,
-      startDate,
-      endDate,
-    );
+  getCalendar(@Request() req, @Query() filters: CalendarInvoiceFilterDto) {
+    return this.invoicesService.getCalendar(req.user, filters);
   }
 
   @Post('contacts')

@@ -158,6 +158,17 @@ export class InventoryService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit), kpis };
   }
 
+  async findAllProductsList(user: any): Promise<Array<Pick<Product, 'id' | 'name'>>> {
+    const where: any = { companyId: user.companyId };
+    if (user.role === 2) where.userId = user.id;
+
+    return this.productRepo.find({
+      where,
+      select: ['id', 'name'],
+      order: { name: 'ASC' },
+    });
+  }
+
   async findOneProduct(id: number, user: any): Promise<Product> {
     const where: any = { id, companyId: user.companyId };
     if (user.role === 2) where.userId = user.id;

@@ -19,6 +19,7 @@ import { MovementType as TxMovementType } from '../transactions/entities/transac
 import { CreateContactDto } from './dto/create-contact.dto';
 import { CreatePurchaseInvoiceDto } from './dto/create-purchase-invoice.dto';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
+import { CalendarInvoiceFilterDto } from './dto/calendar-invoice-filter.dto';
 import { FilterContactDto } from './dto/filter-contact.dto';
 import { FilterInvoiceDto } from './dto/filter-invoice.dto';
 import { UpdateContactDto } from './dto/update-contact.dto';
@@ -89,6 +90,26 @@ interface InvoiceDetailRow {
   kind?: 'text' | 'status';
 }
 
+interface CalendarInvoiceRawRow {
+  id: string;
+  invoiceNumber: string;
+  contactName: string | null;
+  totalAmount: string | null;
+  status: InvoiceStatus;
+  invoiceType: InvoiceType;
+  dueDate: string;
+}
+
+export interface CalendarInvoiceItem {
+  id: number;
+  invoiceNumber: string;
+  contactName: string | null;
+  totalAmount: number;
+  status: InvoiceStatus;
+  invoiceType: InvoiceType;
+  dueDate: string;
+}
+
 export interface SalesInvoicePdfResponse {
   filename: string;
   format: 'pdf';
@@ -120,6 +141,8 @@ interface PreparedInvoicePayload {
   bankId?: number;
   items: ResolvedInvoiceItem[];
 }
+
+export type CalendarGroupedResponse = Record<string, CalendarInvoiceItem[]>;
 
 @Injectable()
 export class InvoicesService {
@@ -447,15 +470,28 @@ export class InvoicesService {
 
   async getCalendar(
     user: any,
-    invoiceType?: InvoiceType,
-    startDate?: string,
-    endDate?: string,
-  ) {
+    filters: CalendarInvoiceFilterDto,
+  ): Promise<CalendarGroupedResponse> {
+    const { invoiceType, startDate, endDate } = filters;
+    if (startDate && endDate && startDate > endDate) {
+      throw new BadRequestException(
+        'startDate no puede ser mayor que endDate',
+      );
+    }
+
     const qb = this.invoiceRepo
       .createQueryBuilder('inv')
-      .leftJoinAndSelect('inv.contact', 'contact')
+      .leftJoin('inv.contact', 'contact')
+      .select('inv.id', 'id')
+      .addSelect('inv.invoice_number', 'invoiceNumber')
+      .addSelect('contact.name', 'contactName')
+      .addSelect('inv.total_amount', 'totalAmount')
+      .addSelect('inv.status', 'status')
+      .addSelect('inv.invoice_type', 'invoiceType')
+      .addSelect(`TO_CHAR(inv.due_date, 'YYYY-MM-DD')`, 'dueDate')
       .orderBy('inv.due_date', 'ASC')
-      .andWhere('inv.company_id = :companyId', { companyId: user.companyId });
+      .addOrderBy('inv.id', 'ASC')
+      .where('inv.company_id = :companyId', { companyId: user.companyId });
 
     if (user.role === 2) {
       qb.andWhere('inv.user_id = :userId', { userId: user.id });
@@ -470,22 +506,21 @@ export class InvoicesService {
       qb.andWhere('inv.due_date <= :endDate', { endDate });
     }
 
-    const invoices = await qb.getMany();
-    const grouped: Record<string, any[]> = {};
+    const rows = await qb.getRawMany<CalendarInvoiceRawRow>();
+    const grouped: CalendarGroupedResponse = {};
 
-    for (const inv of invoices) {
-      const dateKey = inv.dueDate.toString().split('T')[0];
-      if (!grouped[dateKey]) {
-        grouped[dateKey] = [];
+    for (const row of rows) {
+      if (!grouped[row.dueDate]) {
+        grouped[row.dueDate] = [];
       }
-      grouped[dateKey].push({
-        id: inv.id,
-        invoiceNumber: inv.invoiceNumber,
-        contactName: inv.contact?.name,
-        totalAmount: inv.totalAmount,
-        status: inv.status,
-        invoiceType: inv.invoiceType,
-        dueDate: inv.dueDate,
+      grouped[row.dueDate].push({
+        id: Number(row.id),
+        invoiceNumber: row.invoiceNumber,
+        contactName: row.contactName?.trim() || null,
+        totalAmount: Number(row.totalAmount ?? 0),
+        status: row.status,
+        invoiceType: row.invoiceType,
+        dueDate: row.dueDate,
       });
     }
 

@@ -68,6 +68,13 @@ export class InventoryController {
     return this.inventoryService.findAllProducts(filters, req.user);
   }
 
+  @Get('products-list')
+  @ApiOperation({ summary: 'Listar productos (solo id y name) sin paginacion' })
+  @ApiResponse({ status: 200, description: 'Lista simple de productos' })
+  findAllProductsList(@Request() req) {
+    return this.inventoryService.findAllProductsList(req.user);
+  }
+
   @Get('products/:id')
   @ApiOperation({ summary: 'Obtener detalle de un producto' })
   @ApiParam({ name: 'id', example: 1 })
