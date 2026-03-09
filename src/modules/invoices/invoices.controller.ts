@@ -156,8 +156,23 @@ export class InvoicesController {
   @Get(':id')
   @ApiOperation({ summary: 'Obtener factura por ID' })
   @ApiParam({ name: 'id', example: 1 })
-  findOne(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.invoicesService.findOne(id, req.user);
+  async findOne(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    const invoice = await this.invoicesService.findOne(id, req.user);
+
+    if (invoice.invoiceType !== InvoiceType.VENTA) {
+      return invoice;
+    }
+
+    const pdf = await this.invoicesService.downloadSalesInvoicePdf(id, req.user);
+
+    return {
+      ...invoice,
+      downloadUrl: pdf.downloadUrl,
+      downloadUrlExpiresAt: pdf.expiresAt,
+      pdfFileUrl: pdf.fileUrl,
+      pdfFilename: pdf.filename,
+      pdfKey: pdf.key,
+    };
   }
 
   @Patch(':id')
