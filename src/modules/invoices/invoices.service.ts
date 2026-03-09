@@ -435,7 +435,32 @@ export class InvoicesService {
     }
 
     const [data, total] = await qb.getManyAndCount();
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    const dataWithDownloadUrl = await Promise.all(
+      data.map(async (invoice) => {
+        if (invoice.invoiceType !== InvoiceType.VENTA) {
+          return invoice;
+        }
+
+        const pdf = await this.downloadSalesInvoicePdf(invoice.id, user);
+
+        return {
+          ...invoice,
+          downloadUrl: pdf.downloadUrl,
+          downloadUrlExpiresAt: pdf.expiresAt,
+          pdfFileUrl: pdf.fileUrl,
+          pdfFilename: pdf.filename,
+          pdfKey: pdf.key,
+        };
+      }),
+    );
+
+    return {
+      data: dataWithDownloadUrl,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(id: number, user: any): Promise<Invoice> {
