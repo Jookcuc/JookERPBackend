@@ -1,6 +1,18 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import * as qrcode from 'qrcode';
+import {
+  Repository,
+  ILike,
+  Between,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+} from 'typeorm';
 import { ProductType } from './entities/product-type.entity';
 import { Product } from './entities/product.entity';
 import { CreateProductTypeDto } from './dto/create-product-type.dto';
@@ -9,6 +21,16 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { FilterProductDto } from './dto/filter-product.dto';
 import { UpdateProductTypeDto } from './dto/update-product-type.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { S3Service } from '../s3/s3.service';
+
+type ProductQrResponse = {
+  qrCode: string;
+  productUrl: string;
+  qrCodeUrl: string;
+  qrCodeKey: string;
+  downloadUrl: string;
+  downloadUrlExpiresAt: string;
+};
 
 @Injectable()
 export class InventoryService {
@@ -17,6 +39,8 @@ export class InventoryService {
     private readonly typeRepo: Repository<ProductType>,
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
+    private readonly configService: ConfigService,
+    private readonly s3Service: S3Service,
   ) {}
 
   // ─── TIPOS ───────────────────────────────────────────────────
@@ -25,9 +49,14 @@ export class InventoryService {
     const existing = await this.typeRepo.findOne({
       where: { code: dto.code, companyId: user.companyId },
     });
-    if (existing) throw new ConflictException(`El código ${dto.code} ya existe`);
+    if (existing)
+      throw new ConflictException(`El código ${dto.code} ya existe`);
 
-    const type = this.typeRepo.create({ ...dto, userId: user.id, companyId: user.companyId });
+    const type = this.typeRepo.create({
+      ...dto,
+      userId: user.id,
+      companyId: user.companyId,
+    });
     return this.typeRepo.save(type);
   }
 
@@ -37,9 +66,9 @@ export class InventoryService {
     const limit = filters.limit ?? 5;
     const skip = (page - 1) * limit;
 
-    const where: any = { companyId: user.companyId };  // ← siempre filtra por empresa
+    const where: any = { companyId: user.companyId }; // ← siempre filtra por empresa
 
-    if (user.role === 2) where.userId = user.id;  // rol 'user' solo ve los suyos
+    if (user.role === 2) where.userId = user.id; // rol 'user' solo ve los suyos
     if (name) where.name = ILike(`%${name}%`);
     if (code) where.code = ILike(`%${code}%`);
     if (startDate && endDate) {
@@ -66,7 +95,13 @@ export class InventoryService {
       totalStock: t.products?.reduce((acc, p) => acc + p.stock, 0) ?? 0,
     }));
 
-    return { data: mapped, total, page, limit, totalPages: Math.ceil(total / limit) };
+    return {
+      data: mapped,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findAllTypesList(user: any) {
@@ -80,15 +115,22 @@ export class InventoryService {
     });
   }
 
-  async updateType(id: number, dto: UpdateProductTypeDto, user: any): Promise<ProductType> {
-    const type = await this.typeRepo.findOne({ where: { id, companyId: user.companyId } });
+  async updateType(
+    id: number,
+    dto: UpdateProductTypeDto,
+    user: any,
+  ): Promise<ProductType> {
+    const type = await this.typeRepo.findOne({
+      where: { id, companyId: user.companyId },
+    });
     if (!type) throw new NotFoundException(`Tipo con id ${id} no encontrado`);
 
     if (dto.code && dto.code !== type.code) {
       const codeExists = await this.typeRepo.findOne({
         where: { code: dto.code, companyId: user.companyId },
       });
-      if (codeExists) throw new ConflictException(`El código ${dto.code} ya está en uso`);
+      if (codeExists)
+        throw new ConflictException(`El código ${dto.code} ya está en uso`);
     }
 
     Object.assign(type, dto);
@@ -104,7 +146,7 @@ export class InventoryService {
 
     if (type.products?.length > 0) {
       throw new ConflictException(
-        `No se puede eliminar el tipo porque tiene ${type.products.length} producto(s) asociado(s)`
+        `No se puede eliminar el tipo porque tiene ${type.products.length} producto(s) asociado(s)`,
       );
     }
 
@@ -114,23 +156,45 @@ export class InventoryService {
 
   // ─── PRODUCTOS ───────────────────────────────────────────────
 
-  async createProduct(dto: CreateProductDto, user: any): Promise<Product> {
+  async createProduct(
+    dto: CreateProductDto,
+    user: any,
+  ): Promise<Product & Partial<ProductQrResponse>> {
     const typeExists = await this.typeRepo.findOne({
       where: { id: dto.typeId, companyId: user.companyId },
     });
-    if (!typeExists) throw new NotFoundException(`Tipo con id ${dto.typeId} no encontrado`);
+    if (!typeExists)
+      throw new NotFoundException(`Tipo con id ${dto.typeId} no encontrado`);
 
     const existing = await this.productRepo.findOne({
       where: { code: dto.code, companyId: user.companyId },
     });
-    if (existing) throw new ConflictException(`El código de producto ${dto.code} ya existe`);
+    if (existing)
+      throw new ConflictException(
+        `El código de producto ${dto.code} ya existe`,
+      );
 
-    const product = this.productRepo.create({ ...dto, userId: user.id, companyId: user.companyId });
-    return this.productRepo.save(product);
+    const product = this.productRepo.create({
+      ...dto,
+      userId: user.id,
+      companyId: user.companyId,
+    });
+    const savedProduct = await this.productRepo.save(product);
+
+    try {
+      const qrCodeData = await this.buildProductQrResponse(savedProduct);
+      return Object.assign(savedProduct, qrCodeData);
+    } catch (err) {
+      console.error('Error generating QR code for product', err);
+      return Object.assign(savedProduct, {
+        productUrl: this.buildProductDetailUrl(savedProduct.id),
+      });
+    }
   }
 
   async findAllProducts(filters: FilterProductDto, user: any) {
-    const { name, code, minPrice, maxPrice, typeId, startDate, endDate } = filters;
+    const { name, code, minPrice, maxPrice, typeId, startDate, endDate } =
+      filters;
     const page = filters.page ?? 1;
     const limit = filters.limit ?? 5;
     const skip = (page - 1) * limit;
@@ -141,24 +205,36 @@ export class InventoryService {
       .skip(skip)
       .take(limit)
       .orderBy('p.createdAt', 'DESC')
-      .andWhere('p.company_id = :companyId', { companyId: user.companyId });  // ← siempre
+      .andWhere('p.company_id = :companyId', { companyId: user.companyId }); // ← siempre
 
-    if (user.role === 2) qb.andWhere('p.user_id = :userId', { userId: user.id });  // solo los suyos
+    if (user.role === 2)
+      qb.andWhere('p.user_id = :userId', { userId: user.id }); // solo los suyos
     if (name) qb.andWhere('p.name ILIKE :name', { name: `%${name}%` });
     if (code) qb.andWhere('p.code ILIKE :code', { code: `%${code}%` });
     if (typeId) qb.andWhere('p.type_id = :typeId', { typeId });
-    if (minPrice !== undefined) qb.andWhere('p.sale_price >= :minPrice', { minPrice });
-    if (maxPrice !== undefined) qb.andWhere('p.sale_price <= :maxPrice', { maxPrice });
+    if (minPrice !== undefined)
+      qb.andWhere('p.sale_price >= :minPrice', { minPrice });
+    if (maxPrice !== undefined)
+      qb.andWhere('p.sale_price <= :maxPrice', { maxPrice });
     if (startDate) qb.andWhere('p.entry_date >= :startDate', { startDate });
     if (endDate) qb.andWhere('p.entry_date <= :endDate', { endDate });
 
     const [data, total] = await qb.getManyAndCount();
     const kpis = await this.getKpis(user);
 
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit), kpis };
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      kpis,
+    };
   }
 
-  async findAllProductsList(user: any): Promise<Array<Pick<Product, 'id' | 'name'>>> {
+  async findAllProductsList(
+    user: any,
+  ): Promise<Array<Pick<Product, 'id' | 'name'>>> {
     const where: any = { companyId: user.companyId };
     if (user.role === 2) where.userId = user.id;
 
@@ -177,28 +253,53 @@ export class InventoryService {
       where,
       relations: ['type'],
     });
-    if (!product) throw new NotFoundException(`Producto con id ${id} no encontrado`);
+    if (!product)
+      throw new NotFoundException(`Producto con id ${id} no encontrado`);
     return product;
   }
 
-  async updateProduct(id: number, dto: UpdateProductDto, user: any): Promise<Product> {
+  async getProductQr(id: number, user: any): Promise<ProductQrResponse> {
+    const product = await this.findOneProduct(id, user);
+    return this.buildProductQrResponse(product);
+  }
+
+  async downloadProductQr(
+    id: number,
+    user: any,
+  ): Promise<{ downloadUrl: string; expiresAt: string }> {
+    const product = await this.findOneProduct(id, user);
+    const qrAsset = await this.syncProductQrAsset(product);
+    return this.s3Service.generateDownloadUrl(
+      qrAsset.qrCodeKey,
+      qrAsset.fileName,
+    );
+  }
+
+  async updateProduct(
+    id: number,
+    dto: UpdateProductDto,
+    user: any,
+  ): Promise<Product> {
     const product = await this.productRepo.findOne({
       where: { id, companyId: user.companyId },
     });
-    if (!product) throw new NotFoundException(`Producto con id ${id} no encontrado`);
+    if (!product)
+      throw new NotFoundException(`Producto con id ${id} no encontrado`);
 
     if (dto.typeId) {
       const typeExists = await this.typeRepo.findOne({
         where: { id: dto.typeId, companyId: user.companyId },
       });
-      if (!typeExists) throw new NotFoundException(`Tipo con id ${dto.typeId} no encontrado`);
+      if (!typeExists)
+        throw new NotFoundException(`Tipo con id ${dto.typeId} no encontrado`);
     }
 
     if (dto.code && dto.code !== product.code) {
       const codeExists = await this.productRepo.findOne({
         where: { code: dto.code, companyId: user.companyId },
       });
-      if (codeExists) throw new ConflictException(`El código ${dto.code} ya está en uso`);
+      if (codeExists)
+        throw new ConflictException(`El código ${dto.code} ya está en uso`);
     }
 
     Object.assign(product, dto);
@@ -209,8 +310,10 @@ export class InventoryService {
     const product = await this.productRepo.findOne({
       where: { id, companyId: user.companyId },
     });
-    if (!product) throw new NotFoundException(`Producto con id ${id} no encontrado`);
+    if (!product)
+      throw new NotFoundException(`Producto con id ${id} no encontrado`);
 
+    await this.s3Service.deleteFile(this.buildProductQrKey(product));
     await this.productRepo.remove(product);
     return { message: `Producto "${product.name}" eliminado correctamente` };
   }
@@ -220,16 +323,119 @@ export class InventoryService {
       .createQueryBuilder('p')
       .andWhere('p.company_id = :companyId', { companyId: user.companyId });
 
-    if (user.role === 2) qb.andWhere('p.user_id = :userId', { userId: user.id });
+    if (user.role === 2)
+      qb.andWhere('p.user_id = :userId', { userId: user.id });
 
     const allProducts = await qb.getMany();
 
     return {
       totalProducts: allProducts.length,
-      totalCost: +allProducts.reduce((acc, p) => acc + Number(p.cost) * p.stock, 0).toFixed(2),
-      totalRetailValue: +allProducts.reduce((acc, p) => acc + Number(p.salePrice) * p.stock, 0).toFixed(2),
+      totalCost: +allProducts
+        .reduce((acc, p) => acc + Number(p.cost) * p.stock, 0)
+        .toFixed(2),
+      totalRetailValue: +allProducts
+        .reduce((acc, p) => acc + Number(p.salePrice) * p.stock, 0)
+        .toFixed(2),
       outOfStock: allProducts.filter((p) => p.stock === 0).length,
-      lowStock: allProducts.filter((p) => p.stock > 0 && p.stock <= p.minStock).length,
+      lowStock: allProducts.filter((p) => p.stock > 0 && p.stock <= p.minStock)
+        .length,
     };
+  }
+
+  private buildProductDetailUrl(productId: number): string {
+    return new URL(
+      `/es/inventory/detail/${productId}`,
+      this.getProductQrBaseUrl(),
+    ).toString();
+  }
+
+  private async buildProductQrResponse(
+    product: Product,
+  ): Promise<ProductQrResponse> {
+    const qrAsset = await this.syncProductQrAsset(product);
+    const { downloadUrl, expiresAt } = await this.s3Service.generateDownloadUrl(
+      qrAsset.qrCodeKey,
+      qrAsset.fileName,
+    );
+
+    return {
+      qrCode: this.bufferToDataUrl(qrAsset.image),
+      productUrl: qrAsset.productUrl,
+      qrCodeUrl: qrAsset.qrCodeUrl,
+      qrCodeKey: qrAsset.qrCodeKey,
+      downloadUrl,
+      downloadUrlExpiresAt: expiresAt,
+    };
+  }
+
+  private async syncProductQrAsset(product: Product): Promise<{
+    productUrl: string;
+    qrCodeKey: string;
+    qrCodeUrl: string;
+    fileName: string;
+    image: Buffer;
+  }> {
+    const productUrl = this.buildProductDetailUrl(product.id);
+    const image = await this.generateProductQrBuffer(productUrl);
+    const qrCodeKey = this.buildProductQrKey(product);
+    const fileName = this.buildQrFileName(product);
+    const uploadedQr = await this.s3Service.uploadFile({
+      key: qrCodeKey,
+      body: image,
+      contentType: 'image/png',
+    });
+
+    return {
+      productUrl,
+      qrCodeKey: uploadedQr.key,
+      qrCodeUrl: uploadedQr.fileUrl,
+      fileName,
+      image,
+    };
+  }
+
+  private getProductQrBaseUrl(): string {
+    const configuredBaseUrl =
+      this.configService.get<string>('PRODUCT_QR_BASE_URL') ||
+      this.configService.get<string>('FRONTEND_URL') ||
+      'http://localhost:3000';
+
+    try {
+      return new URL(configuredBaseUrl).toString();
+    } catch {
+      return 'http://localhost:3000/';
+    }
+  }
+
+  private generateProductQrBuffer(productUrl: string): Promise<Buffer> {
+    return qrcode.toBuffer(productUrl, {
+      type: 'png',
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 300,
+    });
+  }
+
+  private bufferToDataUrl(image: Buffer): string {
+    return `data:image/png;base64,${image.toString('base64')}`;
+  }
+
+  private buildProductQrKey(
+    product: Pick<Product, 'companyId' | 'id'>,
+  ): string {
+    return `qr-products-codes/company-${product.companyId}/product-${product.id}.png`;
+  }
+
+  private buildQrFileName(product: Product): string {
+    const rawName =
+      product.code?.trim() || product.name?.trim() || `product-${product.id}`;
+    const slug = rawName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    return `${slug || `product-${product.id}`}-qr.png`;
   }
 }

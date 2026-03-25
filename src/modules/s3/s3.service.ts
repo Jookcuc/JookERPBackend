@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -142,6 +143,27 @@ export class S3Service {
       );
       throw new InternalServerErrorException(
         'No se pudo generar la URL de descarga',
+      );
+    }
+  }
+
+  async deleteFile(key: string): Promise<void> {
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      });
+
+      await this.s3Client.send(command);
+
+      this.logger.log(`Archivo eliminado de S3: ${key}`);
+    } catch (error: unknown) {
+      this.logger.error(
+        `Error eliminando archivo de S3: ${this.getErrorMessage(error)}`,
+        this.getErrorStack(error),
+      );
+      throw new InternalServerErrorException(
+        'No se pudo eliminar el archivo de S3',
       );
     }
   }
