@@ -11,6 +11,7 @@ import { TransactionsModule } from '../transactions/transactions.module';
 import { S3Module } from '../s3/s3.module';
 import { Company } from '../company/entities/company.entity';
 import { Bank } from '../banks/entities/bank.entity';
+import { InvoiceExtractionService } from './invoice-extraction.service';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { Bank } from '../banks/entities/bank.entity';
     S3Module,
   ],
   controllers: [InvoicesController],
-  providers: [InvoicesService],
+  providers: [InvoicesService, InvoiceExtractionService],
   exports: [InvoicesService],
 })
 export class InvoicesModule {}
