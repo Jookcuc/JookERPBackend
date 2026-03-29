@@ -16,6 +16,7 @@ import { S3Module } from './modules/s3/s3.module';
 import { BanksModule } from './modules/banks/banks.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { PersonnelModule } from './modules/personnel/personnel.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     BanksModule,
     TransactionsModule,
     DashboardModule,
+    PersonnelModule,
   ],
   controllers: [AppController],
   providers: [

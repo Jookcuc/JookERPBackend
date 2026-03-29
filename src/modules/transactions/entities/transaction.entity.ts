@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Invoice } from '../../invoices/entities/invoice.entity';
 import { Bank } from '../../banks/entities/bank.entity';
 
@@ -39,6 +47,15 @@ export class Transaction {
 
   @Column({ name: 'date', type: 'date' })
   date: Date;
+
+  @Column({ name: 'employee_id', nullable: true })
+  employeeId?: number;
+
+  @Column({ name: 'payroll_id', nullable: true })
+  payrollId?: number;
+
+  @Column({ name: 'settlement_id', nullable: true })
+  settlementId?: number;
 
   @ManyToOne(() => Invoice, { nullable: true })
   @JoinColumn({ name: 'invoice_id' })
