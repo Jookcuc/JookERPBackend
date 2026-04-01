@@ -608,25 +608,6 @@ export class PersonnelService {
     return { uploadUrl, photoUrl: imageUrl };
   }
 
-  async uploadEmployeePhoto(
-    id: number,
-    file: Express.Multer.File,
-    user: AuthenticatedUser,
-  ): Promise<Employee> {
-    await this.findEmployee(id, user);
-
-    const timestamp = Date.now();
-    const sanitized = file.originalname.replace(/\s+/g, '-').toLowerCase();
-    const key = `employees/photos/${id}/${timestamp}-${sanitized}`;
-
-    const { fileUrl } = await this.s3Service.uploadFile({
-      key,
-      body: file.buffer,
-      contentType: file.mimetype,
-    });
-
-    return this.updateEmployeePhoto(id, fileUrl, user);
-  }
 
   async updateEmployeePhoto(
     id: number,
