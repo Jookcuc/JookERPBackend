@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { S3Service } from '../s3/s3.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
@@ -61,6 +62,7 @@ export class PersonnelService {
     private readonly settlementRepo: Repository<Settlement>,
     @InjectRepository(Transaction)
     private readonly transactionRepo: Repository<Transaction>,
+    private readonly s3Service: S3Service,
   ) {}
 
   async createEmployee(
@@ -587,6 +589,53 @@ export class PersonnelService {
       where: { companyId: user.companyId, employeeId: id },
       order: { date: 'DESC', createdAt: 'DESC' },
     });
+  }
+
+  async getEmployeePhotoUploadUrl(
+    id: number,
+    filename: string,
+    contentType: string,
+    user: AuthenticatedUser,
+  ): Promise<{ uploadUrl: string; photoUrl: string }> {
+    await this.findEmployee(id, user);
+
+    const { uploadUrl, imageUrl } = await this.s3Service.generatePresignedUrl(
+      filename,
+      contentType,
+      `employees/photos/${id}`,
+    );
+
+    return { uploadUrl, photoUrl: imageUrl };
+  }
+
+  async uploadEmployeePhoto(
+    id: number,
+    file: Express.Multer.File,
+    user: AuthenticatedUser,
+  ): Promise<Employee> {
+    await this.findEmployee(id, user);
+
+    const timestamp = Date.now();
+    const sanitized = file.originalname.replace(/\s+/g, '-').toLowerCase();
+    const key = `employees/photos/${id}/${timestamp}-${sanitized}`;
+
+    const { fileUrl } = await this.s3Service.uploadFile({
+      key,
+      body: file.buffer,
+      contentType: file.mimetype,
+    });
+
+    return this.updateEmployeePhoto(id, fileUrl, user);
+  }
+
+  async updateEmployeePhoto(
+    id: number,
+    photoUrl: string,
+    user: AuthenticatedUser,
+  ): Promise<Employee> {
+    const employee = await this.findEmployee(id, user);
+    employee.photoUrl = photoUrl;
+    return this.employeeRepo.save(employee);
   }
 
   async getCatalogs() {

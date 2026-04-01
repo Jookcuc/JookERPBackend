@@ -83,6 +83,9 @@ export class Employee {
   @Column({ name: 'contract_url', type: 'text', nullable: true })
   contractUrl?: string;
 
+  @Column({ name: 'photo_url', type: 'text', nullable: true })
+  photoUrl?: string;
+
   @Column({
     name: 'emergency_contact_name',
     type: 'varchar',

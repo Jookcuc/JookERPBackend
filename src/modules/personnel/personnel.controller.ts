@@ -32,6 +32,10 @@ import { PayPayrollDto } from './dto/pay-payroll.dto';
 import { PaySettlementDto } from './dto/pay-settlement.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
 import { UpdateLeaveStatusDto } from './dto/update-leave-status.dto';
+import {
+  EmployeePhotoUploadUrlDto,
+  UpdateEmployeePhotoDto,
+} from './dto/employee-photo.dto';
 import { PersonnelService } from './personnel.service';
 
 @ApiTags('Personnel')
@@ -63,6 +67,45 @@ export class PersonnelController {
   @ApiParam({ name: 'id', example: 1 })
   findEmployee(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.personnelService.findEmployee(id, req.user);
+  }
+
+  @Get('employees/:id/photo-upload-url')
+  @ApiOperation({
+    summary: 'Obtener URL prefirmada para subir foto del empleado',
+    description:
+      'Retorna uploadUrl (válida 5 min para hacer PUT desde el frontend) y photoUrl (URL permanente para guardar en BD tras subir la imagen)',
+  })
+  @ApiParam({ name: 'id', example: 1 })
+  getEmployeePhotoUploadUrl(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: EmployeePhotoUploadUrlDto,
+    @Request() req,
+  ) {
+    return this.personnelService.getEmployeePhotoUploadUrl(
+      id,
+      query.filename,
+      query.contentType,
+      req.user,
+    );
+  }
+
+  @Patch('employees/:id/photo')
+  @ApiOperation({
+    summary: 'Actualizar URL de foto del empleado',
+    description:
+      'Después de subir la imagen a S3 usando la URL prefirmada, llama este endpoint para persistir la photoUrl en la base de datos',
+  })
+  @ApiParam({ name: 'id', example: 1 })
+  updateEmployeePhoto(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateEmployeePhotoDto,
+    @Request() req,
+  ) {
+    return this.personnelService.updateEmployeePhoto(
+      id,
+      dto.photoUrl,
+      req.user,
+    );
   }
 
   @Patch('employees/:id')
