@@ -619,6 +619,28 @@ export class PersonnelService {
     return this.employeeRepo.save(employee);
   }
 
+  async getEmployeeContractDownloadUrl(
+    id: number,
+    user: AuthenticatedUser,
+  ): Promise<{ downloadUrl: string; expiresAt: string }> {
+    const employee = await this.findEmployee(id, user);
+
+    if (!employee.contractUrl) {
+      throw new BadRequestException(
+        `El empleado con id ${id} no tiene contrato registrado`,
+      );
+    }
+
+    const key = this.s3Service.extractKeyFromUrl(employee.contractUrl);
+    if (!key) {
+      throw new BadRequestException(
+        'La URL del contrato no corresponde a un archivo valido de S3',
+      );
+    }
+
+    return this.s3Service.generateDownloadUrl(key, `contrato-empleado-${id}.pdf`);
+  }
+
   async getCatalogs() {
     return {
       employeeStatus: Object.values(EmployeeStatus),

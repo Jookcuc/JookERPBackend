@@ -34,6 +34,7 @@ export class S3Controller {
     return this.s3Service.generatePresignedUrl(
       query.filename,
       query.contentType,
+      query.directory,
     );
   }
 }

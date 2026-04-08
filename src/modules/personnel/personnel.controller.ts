@@ -108,6 +108,18 @@ export class PersonnelController {
     );
   }
 
+  @Get('employees/:id/contract-download-url')
+  @ApiOperation({
+    summary: 'Obtener URL prefirmada para descargar el contrato del empleado',
+  })
+  @ApiParam({ name: 'id', example: 1 })
+  getEmployeeContractDownloadUrl(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+  ) {
+    return this.personnelService.getEmployeeContractDownloadUrl(id, req.user);
+  }
+
   @Patch('employees/:id')
   @ApiOperation({ summary: 'Actualizar empleado' })
   @ApiParam({ name: 'id', example: 1 })

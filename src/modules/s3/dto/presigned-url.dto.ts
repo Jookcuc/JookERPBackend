@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, Matches } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 
 export class PresignedUrlDto {
   @ApiProperty({
@@ -20,4 +20,12 @@ export class PresignedUrlDto {
     message: 'contentType debe ser una imagen valida o application/pdf',
   })
   contentType: string;
+
+  @ApiPropertyOptional({
+    example: 'employees/contracts',
+    description: 'Directorio destino dentro del bucket para guardar el archivo',
+  })
+  @IsOptional()
+  @IsString()
+  directory?: string;
 }

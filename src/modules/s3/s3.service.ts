@@ -168,6 +168,38 @@ export class S3Service {
     }
   }
 
+  extractKeyFromUrl(fileUrl: string): string | null {
+    try {
+      const parsedUrl = new URL(fileUrl);
+      const host = parsedUrl.hostname.toLowerCase();
+      const keyFromPath = decodeURIComponent(
+        parsedUrl.pathname.replace(/^\/+/, ''),
+      );
+
+      if (!keyFromPath) {
+        return null;
+      }
+
+      if (host.includes('.s3.') && host.endsWith('.amazonaws.com')) {
+        const bucket = host.split('.s3.')[0];
+        return bucket === this.bucket ? keyFromPath : null;
+      }
+
+      if (host.startsWith('s3.') && host.endsWith('.amazonaws.com')) {
+        const [bucket, ...rest] = keyFromPath.split('/');
+        if (bucket !== this.bucket || rest.length === 0) {
+          return null;
+        }
+
+        return rest.join('/');
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   private buildFileUrl(key: string): string {
     return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
   }
