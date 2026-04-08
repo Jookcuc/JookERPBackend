@@ -147,6 +147,35 @@ export class S3Service {
     }
   }
 
+  async generateReadUrl(
+    key: string,
+    expiresIn = 3600,
+  ): Promise<{ readUrl: string; expiresAt: string }> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+      });
+
+      const readUrl = await getSignedUrl(this.s3Client, command, {
+        expiresIn,
+      });
+
+      return {
+        readUrl,
+        expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
+      };
+    } catch (error: unknown) {
+      this.logger.error(
+        `Error generando read URL: ${this.getErrorMessage(error)}`,
+        this.getErrorStack(error),
+      );
+      throw new InternalServerErrorException(
+        'No se pudo generar la URL de lectura',
+      );
+    }
+  }
+
   async deleteFile(key: string): Promise<void> {
     try {
       const command = new DeleteObjectCommand({

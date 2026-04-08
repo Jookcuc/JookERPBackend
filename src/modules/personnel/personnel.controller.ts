@@ -66,7 +66,7 @@ export class PersonnelController {
   @ApiOperation({ summary: 'Obtener empleado por id' })
   @ApiParam({ name: 'id', example: 1 })
   findEmployee(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.personnelService.findEmployee(id, req.user);
+    return this.personnelService.findEmployeeWithResolvedPhoto(id, req.user);
   }
 
   @Get('employees/:id/photo-upload-url')

@@ -22,7 +22,7 @@ import { PersonnelModule } from './modules/personnel/personnel.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env.local', '.env'],
     }),
 
     TypeOrmModule.forRootAsync({

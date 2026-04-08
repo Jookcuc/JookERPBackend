@@ -129,7 +129,17 @@ export class PersonnelService {
       .take(limit)
       .getManyAndCount();
 
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+    const employeesWithResolvedPhoto = await Promise.all(
+      data.map((employee) => this.resolveEmployeePhotoUrl(employee)),
+    );
+
+    return {
+      data: employeesWithResolvedPhoto,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findEmployee(id: number, user: AuthenticatedUser): Promise<Employee> {
@@ -142,6 +152,14 @@ export class PersonnelService {
     }
 
     return employee;
+  }
+
+  async findEmployeeWithResolvedPhoto(
+    id: number,
+    user: AuthenticatedUser,
+  ): Promise<Employee> {
+    const employee = await this.findEmployee(id, user);
+    return this.resolveEmployeePhotoUrl(employee);
   }
 
   async updateEmployee(
@@ -616,7 +634,8 @@ export class PersonnelService {
   ): Promise<Employee> {
     const employee = await this.findEmployee(id, user);
     employee.photoUrl = photoUrl;
-    return this.employeeRepo.save(employee);
+    const savedEmployee = await this.employeeRepo.save(employee);
+    return this.resolveEmployeePhotoUrl(savedEmployee);
   }
 
   async getEmployeeContractDownloadUrl(
@@ -684,5 +703,22 @@ export class PersonnelService {
 
   private roundAmount(value: number): number {
     return Number(value.toFixed(2));
+  }
+
+  private async resolveEmployeePhotoUrl(employee: Employee): Promise<Employee> {
+    if (!employee.photoUrl) {
+      return employee;
+    }
+
+    const key = this.s3Service.extractKeyFromUrl(employee.photoUrl);
+    if (!key) {
+      return employee;
+    }
+
+    const { readUrl } = await this.s3Service.generateReadUrl(key);
+    return {
+      ...employee,
+      photoUrl: readUrl,
+    };
   }
 }
