@@ -39,6 +39,10 @@ import {
   MovementType,
   Transaction,
 } from '../transactions/entities/transaction.entity';
+import {
+  assertDateRange,
+  calculateInclusiveDays,
+} from '../../common/utils/date-range.util';
 
 interface AuthenticatedUser {
   id: number;
@@ -197,14 +201,15 @@ export class PersonnelService {
     user: AuthenticatedUser,
   ): Promise<Payroll> {
     const employee = await this.findEmployee(dto.employeeId, user);
-    this.validateDateRange(
+    assertDateRange(
       dto.periodStart,
       dto.periodEnd,
-      'La fecha inicial no puede ser mayor a la final',
+      'La fecha fin debe ser estrictamente mayor a la fecha inicio',
+      { allowEqual: false },
     );
 
     const baseSalary = Number(employee.baseSalary) || 0;
-    const workedDays = dto.workedDays ?? 30;
+    const workedDays = calculateInclusiveDays(dto.periodStart, dto.periodEnd);
     const bonuses = Number(dto.bonuses ?? 0);
     const deductions = Number(dto.deductions ?? 0);
     const extraHours = Number(dto.extraHours ?? 0);
@@ -402,8 +407,12 @@ export class PersonnelService {
     dto: CreateLeaveRequestDto,
     user: AuthenticatedUser,
   ): Promise<LeaveRequest> {
-    await this.findEmployee(dto.employeeId, user);
-    this.validateDateRange(
+    const employee = await this.findEmployee(dto.employeeId, user);
+    this.ensureEmployeeIsNotRetired(
+      employee,
+      'No se pueden crear solicitudes para empleados con estado RETIRADO',
+    );
+    assertDateRange(
       dto.startDate,
       dto.endDate,
       'La fecha inicial del permiso no puede ser mayor a la final',
@@ -412,7 +421,7 @@ export class PersonnelService {
     const leave = this.leaveRepo.create({
       ...dto,
       companyId: user.companyId,
-      days: dto.days ?? this.calculateDays(dto.startDate, dto.endDate),
+      days: dto.days ?? calculateInclusiveDays(dto.startDate, dto.endDate),
       status: LeaveStatus.PENDIENTE,
     });
 
@@ -455,6 +464,13 @@ export class PersonnelService {
 
     if (!leave) {
       throw new NotFoundException(`Solicitud con id ${id} no encontrada`);
+    }
+
+    if (dto.status === LeaveStatus.APROBADO) {
+      this.ensureEmployeeIsNotRetired(
+        leave.employee,
+        'No se pueden aprobar solicitudes de empleados con estado RETIRADO',
+      );
     }
 
     leave.status = dto.status;
@@ -626,7 +642,6 @@ export class PersonnelService {
     return { uploadUrl, photoUrl: imageUrl };
   }
 
-
   async updateEmployeePhoto(
     id: number,
     photoUrl: string,
@@ -657,7 +672,10 @@ export class PersonnelService {
       );
     }
 
-    return this.s3Service.generateDownloadUrl(key, `contrato-empleado-${id}.pdf`);
+    return this.s3Service.generateDownloadUrl(
+      key,
+      `contrato-empleado-${id}.pdf`,
+    );
   }
 
   async getCatalogs() {
@@ -685,20 +703,13 @@ export class PersonnelService {
     }
   }
 
-  private validateDateRange(
-    startDate: string,
-    endDate: string,
+  private ensureEmployeeIsNotRetired(
+    employee: Employee,
     message: string,
-  ) {
-    if (new Date(startDate) > new Date(endDate)) {
+  ): void {
+    if (employee.status === EmployeeStatus.RETIRADO) {
       throw new BadRequestException(message);
     }
-  }
-
-  private calculateDays(startDate: string, endDate: string): number {
-    const diffTime =
-      new Date(endDate).getTime() - new Date(startDate).getTime();
-    return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
   }
 
   private roundAmount(value: number): number {

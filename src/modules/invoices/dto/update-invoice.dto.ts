@@ -8,7 +8,10 @@ export class UpdateInvoiceDto {
   @IsEnum(InvoiceStatus)
   status?: InvoiceStatus;
 
-  @ApiPropertyOptional({ example: '2025-08-20' })
+  @ApiPropertyOptional({
+    example: '2025-08-20',
+    description: 'Debe ser mayor que la fecha de emision de la factura',
+  })
   @IsOptional()
   @IsDateString()
   dueDate?: string;

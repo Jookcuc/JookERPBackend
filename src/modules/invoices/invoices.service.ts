@@ -16,6 +16,7 @@ import { Company } from '../company/entities/company.entity';
 import { S3Service } from '../s3/s3.service';
 import { TransactionsService } from '../transactions/transactions.service';
 import { MovementType as TxMovementType } from '../transactions/entities/transaction.entity';
+import { assertDateRange } from '../../common/utils/date-range.util';
 import { CreateContactDto } from './dto/create-contact.dto';
 import { CreatePurchaseInvoiceDto } from './dto/create-purchase-invoice.dto';
 import { CreateSalesInvoiceDto } from './dto/create-sales-invoice.dto';
@@ -180,6 +181,8 @@ export class InvoicesService {
     dto: PreparedInvoicePayload,
     user: any,
   ): Promise<Invoice> {
+    this.ensureDueDateAfterIssueDate(dto.issueDate, dto.dueDate);
+
     const exists = await this.invoiceRepo.findOne({
       where: {
         invoiceNumber: dto.invoiceNumber,
@@ -312,7 +315,7 @@ export class InvoicesService {
       contactId: contact.id,
       invoiceNumber: dto.invoiceNumber,
       issueDate: dto.issueDate,
-      dueDate: dto.issueDate,
+      dueDate: dto.dueDate,
       totalAmount: dto.totalAmount,
       status: InvoiceStatus.PENDIENTE,
       paymentConditions: dto.paymentConditions,
@@ -346,14 +349,19 @@ export class InvoicesService {
     invoiceType: InvoiceType,
   ): Promise<ResolvedInvoiceItem[]> {
     const productIds = [...new Set(items.map((item) => item.productId))];
-    const requestedQuantities = items.reduce<Map<number, number>>((acc, item) => {
-      acc.set(item.productId, (acc.get(item.productId) ?? 0) + item.quantity);
-      return acc;
-    }, new Map<number, number>());
+    const requestedQuantities = items.reduce<Map<number, number>>(
+      (acc, item) => {
+        acc.set(item.productId, (acc.get(item.productId) ?? 0) + item.quantity);
+        return acc;
+      },
+      new Map<number, number>(),
+    );
     const products = await this.productRepo.find({
       where: { companyId, id: In(productIds) },
     });
-    const productMap = new Map(products.map((product) => [product.id, product]));
+    const productMap = new Map(
+      products.map((product) => [product.id, product]),
+    );
 
     return items.map((item) => {
       const product = productMap.get(item.productId);
@@ -476,6 +484,11 @@ export class InvoicesService {
 
   async update(id: number, dto: UpdateInvoiceDto, user: any): Promise<Invoice> {
     const invoice = await this.findOne(id, user);
+
+    if (dto.dueDate !== undefined) {
+      this.ensureDueDateAfterIssueDate(invoice.issueDate, dto.dueDate);
+    }
+
     Object.assign(invoice, dto);
     return this.invoiceRepo.save(invoice);
   }
@@ -498,11 +511,11 @@ export class InvoicesService {
     filters: CalendarInvoiceFilterDto,
   ): Promise<CalendarGroupedResponse> {
     const { invoiceType, startDate, endDate } = filters;
-    if (startDate && endDate && startDate > endDate) {
-      throw new BadRequestException(
-        'startDate no puede ser mayor que endDate',
-      );
-    }
+    assertDateRange(
+      startDate,
+      endDate,
+      'startDate no puede ser mayor que endDate',
+    );
 
     const qb = this.invoiceRepo
       .createQueryBuilder('inv')
@@ -1907,5 +1920,17 @@ export class InvoicesService {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value || 0);
+  }
+
+  private ensureDueDateAfterIssueDate(
+    issueDate: string | Date,
+    dueDate: string | Date,
+  ): void {
+    assertDateRange(
+      issueDate,
+      dueDate,
+      'La fecha de vencimiento debe ser mayor a la fecha de emision',
+      { allowEqual: false },
+    );
   }
 }

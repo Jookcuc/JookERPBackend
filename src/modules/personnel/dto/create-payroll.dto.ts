@@ -21,7 +21,13 @@ export class CreatePayrollDto {
   @IsDateString()
   periodEnd: string;
 
-  @ApiPropertyOptional({ example: 30, default: 30 })
+  @ApiPropertyOptional({
+    example: 30,
+    default: 30,
+    deprecated: true,
+    description:
+      'Se ignora en backend: los dias trabajados se calculan automaticamente con periodStart y periodEnd',
+  })
   @IsOptional()
   @IsInt()
   @Min(1)

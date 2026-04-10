@@ -29,6 +29,13 @@ export class CreatePurchaseInvoiceDto {
   @IsDateString()
   issueDate: string;
 
+  @ApiProperty({
+    example: '2026-03-18',
+    description: 'Fecha de vencimiento',
+  })
+  @IsDateString()
+  dueDate: string;
+
   @ApiProperty({ example: 180000, description: 'Monto total de la factura' })
   @Type(() => Number)
   @IsNumber()

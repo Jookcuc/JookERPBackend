@@ -1,31 +1,34 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
   Body,
-  Query,
+  Controller,
+  Delete,
+  Get,
   Param,
   ParseIntPipe,
+  Patch,
+  Post,
+  Query,
   Request,
   Res,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiParam,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import type { Response } from 'express';
-import { InventoryService } from './inventory.service';
-import { CreateProductTypeDto } from './dto/create-product-type.dto';
-import { UpdateProductTypeDto } from './dto/update-product-type.dto';
-import { FilterProductTypeDto } from './dto/filter-product-type.dto';
+import { CreateDiscountDto } from './dto/create-discount.dto';
 import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
+import { CreateProductTypeDto } from './dto/create-product-type.dto';
+import { FilterDiscountDto } from './dto/filter-discount.dto';
 import { FilterProductDto } from './dto/filter-product.dto';
+import { FilterProductTypeDto } from './dto/filter-product-type.dto';
+import { UpdateDiscountDto } from './dto/update-discount.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import { UpdateProductTypeDto } from './dto/update-product-type.dto';
+import { InventoryService } from './inventory.service';
 
 @ApiTags('Inventory')
 @ApiBearerAuth('JWT-auth')
@@ -73,6 +76,63 @@ export class InventoryController {
   @ApiParam({ name: 'id', example: 1 })
   removeType(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.inventoryService.removeType(id, req.user);
+  }
+
+  @Post('discounts')
+  @ApiOperation({ summary: 'Crear descuento del catalogo' })
+  @ApiResponse({ status: 201, description: 'Descuento creado exitosamente' })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe un descuento con ese nombre',
+  })
+  createDiscount(@Body() dto: CreateDiscountDto, @Request() req) {
+    return this.inventoryService.createDiscount(dto, req.user);
+  }
+
+  @Get('discounts')
+  @ApiOperation({ summary: 'Listar descuentos con filtros' })
+  @ApiResponse({ status: 200, description: 'Lista paginada de descuentos' })
+  findAllDiscounts(@Query() filters: FilterDiscountDto, @Request() req) {
+    return this.inventoryService.findAllDiscounts(filters, req.user);
+  }
+
+  @Get('discounts-list')
+  @ApiOperation({
+    summary: 'Listar descuentos activos para seleccion sin paginacion',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista simple de descuentos activos',
+  })
+  findAllDiscountsList(@Request() req) {
+    return this.inventoryService.findAllDiscountsList(req.user);
+  }
+
+  @Get('discounts/:id')
+  @ApiOperation({ summary: 'Obtener detalle de un descuento' })
+  @ApiParam({ name: 'id', example: 1 })
+  @ApiResponse({ status: 200, description: 'Detalle del descuento' })
+  @ApiResponse({ status: 404, description: 'Descuento no encontrado' })
+  findOneDiscount(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.inventoryService.findOneDiscount(id, req.user);
+  }
+
+  @Patch('discounts/:id')
+  @ApiOperation({ summary: 'Editar descuento del catalogo' })
+  @ApiParam({ name: 'id', example: 1 })
+  updateDiscount(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateDiscountDto,
+    @Request() req,
+  ) {
+    return this.inventoryService.updateDiscount(id, dto, req.user);
+  }
+
+  @Delete('discounts/:id')
+  @ApiOperation({ summary: 'Eliminar descuento del catalogo' })
+  @ApiParam({ name: 'id', example: 1 })
+  removeDiscount(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.inventoryService.removeDiscount(id, req.user);
   }
 
   @Post('products')
@@ -137,6 +197,7 @@ export class InventoryController {
       id,
       req.user,
     );
+
     return response.redirect(downloadUrl);
   }
 

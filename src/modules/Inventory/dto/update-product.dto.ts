@@ -1,6 +1,15 @@
-import { IsString, IsNumber, IsOptional, IsInt, Min, IsDateString, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsDateString,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateProductDto {
   @ApiPropertyOptional({ example: 1 })
@@ -25,14 +34,14 @@ export class UpdateProductDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ example: 220.00 })
+  @ApiPropertyOptional({ example: 220.0 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   cost?: number;
 
-  @ApiPropertyOptional({ example: 599.00 })
+  @ApiPropertyOptional({ example: 599.0 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
@@ -53,9 +62,33 @@ export class UpdateProductDto {
   @Min(0)
   minStock?: number;
 
-  @ApiPropertyOptional({ example: '10%' })
+  @ApiPropertyOptional({
+    example: 2,
+    nullable: true,
+    description:
+      'ID del descuento del catalogo. Envia null para quitar el descuento actual',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined) return undefined;
+    if (value === null || value === '') return null;
+
+    const parsedValue = Number(value);
+    return Number.isNaN(parsedValue) ? value : parsedValue;
+  })
+  @ValidateIf((_, value) => value !== null && value !== undefined)
+  @IsInt()
+  discountId?: number | null;
+
+  @ApiPropertyOptional({
+    example: '10%',
+    deprecated: true,
+    description:
+      'Campo legado. Si envias discountId, el backend calcula este valor automaticamente',
+  })
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   discount?: string;
 
   @ApiPropertyOptional({ example: 'https://example.com/tablet-plus.png' })

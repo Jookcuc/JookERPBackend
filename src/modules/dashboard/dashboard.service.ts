@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Product } from '../Inventory/entities/product.entity';
@@ -17,6 +17,7 @@ import {
   TopProductsFilterDto,
   TopProductsMetric,
 } from './dto/top-products-filter.dto';
+import { assertDateRange } from '../../common/utils/date-range.util';
 
 interface AuthenticatedUser {
   id: number;
@@ -220,6 +221,8 @@ export class DashboardService {
     filters: DashboardFilterDto,
     user: AuthenticatedUser,
   ): Promise<DashboardOverviewResponse> {
+    this.validateFiltersDateRange(filters);
+
     const [
       transactionSummary,
       invoiceSummary,
@@ -259,6 +262,8 @@ export class DashboardService {
     filters: DashboardFilterDto,
     user: AuthenticatedUser,
   ): Promise<DashboardChartsResponse> {
+    this.validateFiltersDateRange(filters);
+
     const [
       cashFlowByDay,
       salesVsPurchasesByMonth,
@@ -284,6 +289,8 @@ export class DashboardService {
     filters: TopProductsFilterDto,
     user: AuthenticatedUser,
   ): Promise<DashboardTopProductsResponse> {
+    this.validateFiltersDateRange(filters);
+
     const limit = filters.limit ?? 10;
     const metric = filters.metric ?? TopProductsMetric.QUANTITY;
     const orderExpression =
@@ -299,7 +306,10 @@ export class DashboardService {
       .addSelect('MAX(prod.code)', 'productCode')
       .addSelect('MAX(prod.name)', 'productName')
       .addSelect('COALESCE(SUM(item.quantity), 0)', 'totalQuantity')
-      .addSelect('COALESCE(SUM(item.quantity * item.unit_price), 0)', 'totalAmount')
+      .addSelect(
+        'COALESCE(SUM(item.quantity * item.unit_price), 0)',
+        'totalAmount',
+      )
       .addSelect('COUNT(DISTINCT inv.id)', 'invoicesCount')
       .where('inv.company_id = :companyId', { companyId: user.companyId })
       .andWhere('inv.invoice_type = :invoiceType', {
@@ -376,7 +386,10 @@ export class DashboardService {
   private async getInvoiceSummary(
     filters: DashboardFilterDto,
     user: AuthenticatedUser,
-  ): Promise<DashboardOverviewInvoices & Pick<DashboardOverviewFinancial, 'ventasFacturadas' | 'comprasFacturadas'>> {
+  ): Promise<
+    DashboardOverviewInvoices &
+      Pick<DashboardOverviewFinancial, 'ventasFacturadas' | 'comprasFacturadas'>
+  > {
     const qb = this.invoiceRepo
       .createQueryBuilder('inv')
       .select('COUNT(*)', 'total')
@@ -467,10 +480,7 @@ export class DashboardService {
       )
       .addSelect('COALESCE(SUM(p.stock), 0)', 'totalStockUnits')
       .addSelect('COALESCE(SUM(p.cost * p.stock), 0)', 'totalCostValue')
-      .addSelect(
-        'COALESCE(SUM(p.sale_price * p.stock), 0)',
-        'totalRetailValue',
-      )
+      .addSelect('COALESCE(SUM(p.sale_price * p.stock), 0)', 'totalRetailValue')
       .where('p.company_id = :companyId', { companyId: user.companyId });
 
     if (this.isRestrictedUser(user)) {
@@ -647,7 +657,10 @@ export class DashboardService {
   ): Promise<DashboardSalesVsPurchasesPoint[]> {
     const qb = this.invoiceRepo
       .createQueryBuilder('inv')
-      .select(`TO_CHAR(DATE_TRUNC('month', inv.issue_date), 'YYYY-MM')`, 'month')
+      .select(
+        `TO_CHAR(DATE_TRUNC('month', inv.issue_date), 'YYYY-MM')`,
+        'month',
+      )
       .addSelect(
         `COALESCE(SUM(CASE
           WHEN inv.invoice_type = :venta
@@ -722,7 +735,10 @@ export class DashboardService {
   ): Promise<DashboardTransactionCategoryPoint[]> {
     const qb = this.transactionRepo
       .createQueryBuilder('tx')
-      .select(`COALESCE(NULLIF(TRIM(tx.category), ''), 'Sin categoria')`, 'category')
+      .select(
+        `COALESCE(NULLIF(TRIM(tx.category), ''), 'Sin categoria')`,
+        'category',
+      )
       .addSelect('COALESCE(SUM(ABS(tx.amount)), 0)', 'total')
       .where('tx.company_id = :companyId', { companyId: user.companyId })
       .groupBy(`COALESCE(NULLIF(TRIM(tx.category), ''), 'Sin categoria')`)
@@ -757,7 +773,9 @@ export class DashboardService {
     }
   }
 
-  private mapInvoiceAlerts(rows: RawInvoiceAlert[]): DashboardInvoiceAlertItem[] {
+  private mapInvoiceAlerts(
+    rows: RawInvoiceAlert[],
+  ): DashboardInvoiceAlertItem[] {
     return rows.map((row) => ({
       id: Number(row.id),
       invoiceNumber: row.invoiceNumber,
@@ -774,6 +792,24 @@ export class DashboardService {
       startDate: filters.startDate ?? null,
       endDate: filters.endDate ?? null,
     };
+  }
+
+  private validateFiltersDateRange(filters: DashboardFilterDto): void {
+    try {
+      assertDateRange(
+        filters.startDate,
+        filters.endDate,
+        'startDate no puede ser mayor que endDate',
+      );
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new BadRequestException(
+        'No fue posible validar el rango de fechas',
+      );
+    }
   }
 
   private isRestrictedUser(user: AuthenticatedUser): boolean {
