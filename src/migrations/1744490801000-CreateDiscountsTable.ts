@@ -63,26 +63,26 @@ export class CreateDiscountsTable1744490801000 implements MigrationInterface {
       true /* ifNotExists */,
     );
 
-    // 2. Agregar columna discount_id a products (si no existe)
-    const productsTable = await queryRunner.getTable('products');
-    if (productsTable) {
-      const hasDiscountId = productsTable.columns.some(
+    // 2. Agregar columna discount_id a product (si no existe)
+    const productTable = await queryRunner.getTable('product');
+    if (productTable) {
+      const hasDiscountId = productTable.columns.some(
         (col) => col.name === 'discount_id',
       );
 
       if (!hasDiscountId) {
         await queryRunner.query(
-          `ALTER TABLE "products" ADD COLUMN "discount_id" INTEGER NULL`,
+          `ALTER TABLE "product" ADD COLUMN "discount_id" INTEGER NULL`,
         );
 
         await queryRunner.createForeignKey(
-          'products',
+          'product',
           new TableForeignKey({
             columnNames: ['discount_id'],
             referencedTableName: 'discounts',
             referencedColumnNames: ['id'],
             onDelete: 'SET NULL',
-            name: 'FK_products_discount_id',
+            name: 'FK_product_discount_id',
           }),
         );
       }
@@ -90,22 +90,22 @@ export class CreateDiscountsTable1744490801000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // 1. Eliminar FK y columna discount_id de products
-    const productsTable = await queryRunner.getTable('products');
-    if (productsTable) {
-      const fk = productsTable.foreignKeys.find(
-        (fk) => fk.name === 'FK_products_discount_id',
+    // 1. Eliminar FK y columna discount_id de product
+    const productTable = await queryRunner.getTable('product');
+    if (productTable) {
+      const fk = productTable.foreignKeys.find(
+        (fk) => fk.name === 'FK_product_discount_id',
       );
       if (fk) {
-        await queryRunner.dropForeignKey('products', fk);
+        await queryRunner.dropForeignKey('product', fk);
       }
 
-      const hasDiscountId = productsTable.columns.some(
+      const hasDiscountId = productTable.columns.some(
         (col) => col.name === 'discount_id',
       );
       if (hasDiscountId) {
         await queryRunner.query(
-          `ALTER TABLE "products" DROP COLUMN "discount_id"`,
+          `ALTER TABLE "product" DROP COLUMN "discount_id"`,
         );
       }
     }
