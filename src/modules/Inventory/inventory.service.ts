@@ -12,6 +12,7 @@ import {
   ILike,
   LessThanOrEqual,
   MoreThanOrEqual,
+  QueryFailedError,
   Repository,
 } from 'typeorm';
 import { S3Service } from '../s3/s3.service';
@@ -319,7 +320,13 @@ export class InventoryService {
       userId: user.id,
       companyId: user.companyId,
     });
-    const savedProduct = await this.productRepo.save(product);
+    let savedProduct: Product;
+    try {
+      savedProduct = await this.productRepo.save(product);
+    } catch (error) {
+      this.handleProductPersistenceError(error, 'crear');
+    }
+
     const productWithRelations = await this.findOneProduct(
       savedProduct.id,
       user,
@@ -478,7 +485,12 @@ export class InventoryService {
       product.discount = discount?.trim() || 'No aplica';
     }
 
-    await this.productRepo.save(product);
+    try {
+      await this.productRepo.save(product);
+    } catch (error) {
+      this.handleProductPersistenceError(error, 'editar');
+    }
+
     return this.findOneProduct(id, user);
   }
 
@@ -491,8 +503,17 @@ export class InventoryService {
       throw new NotFoundException(`Producto con id ${id} no encontrado`);
     }
 
-    await this.s3Service.deleteFile(this.buildProductQrKey(product));
-    await this.productRepo.remove(product);
+    try {
+      await this.productRepo.remove(product);
+    } catch (error) {
+      this.handleProductPersistenceError(error, 'eliminar');
+    }
+
+    try {
+      await this.s3Service.deleteFile(this.buildProductQrKey(product));
+    } catch (error) {
+      console.error('Error deleting product QR code from S3', error);
+    }
 
     return { message: `Producto "${product.name}" eliminado correctamente` };
   }
@@ -692,5 +713,54 @@ export class InventoryService {
     }
 
     return `${percentage.toFixed(2).replace(/\.?0+$/, '')}%`;
+  }
+
+  private handleProductPersistenceError(error: unknown, action: string): never {
+    if (!(error instanceof QueryFailedError)) {
+      throw error;
+    }
+
+    const driverError = error.driverError as {
+      code?: string;
+      detail?: string;
+      constraint?: string;
+      table?: string;
+    };
+
+    switch (driverError.code) {
+      case '23503':
+        if (action === 'eliminar') {
+          throw new ConflictException(
+            'No se puede eliminar este producto porque tiene movimientos o facturas asociadas',
+          );
+        }
+
+        throw new BadRequestException(
+          'No se pudo guardar el producto porque una relacion asociada no existe o no pertenece a tu empresa',
+        );
+
+      case '23505':
+        throw new ConflictException(
+          'No se pudo guardar el producto porque ya existe un registro con esos datos',
+        );
+
+      case '23502':
+        throw new BadRequestException(
+          'No se pudo guardar el producto porque falta un dato obligatorio',
+        );
+
+      case '22001':
+        throw new BadRequestException(
+          'No se pudo guardar el producto porque uno de los textos supera la longitud permitida',
+        );
+
+      case '22P02':
+        throw new BadRequestException(
+          'No se pudo guardar el producto porque uno de los valores tiene un formato invalido',
+        );
+
+      default:
+        throw error;
+    }
   }
 }
