@@ -17,6 +17,8 @@ import { BanksModule } from './modules/banks/banks.module';
 import { TransactionsModule } from './modules/transactions/transactions.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { PersonnelModule } from './modules/personnel/personnel.module';
+import { CondominiumModule } from './modules/condominium/condominium.module';
+
 
 @Module({
   imports: [
@@ -58,6 +60,7 @@ import { PersonnelModule } from './modules/personnel/personnel.module';
     TransactionsModule,
     DashboardModule,
     PersonnelModule,
+    CondominiumModule,
   ],
   controllers: [AppController],
   providers: [
