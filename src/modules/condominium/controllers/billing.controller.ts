@@ -31,7 +31,7 @@ export class BillingController {
   @ApiOperation({
     summary: 'Generar cuotas mensuales de administración',
     description:
-      'Genera cuotas ordinarias para todas las unidades privadas del condominio en el periodo indicado. Puede distribuir el monto por coeficiente o usar un valor fijo por unidad.',
+      'Genera cuotas ordinarias para las unidades privadas del condominio en el periodo indicado. El body permite definir un presupuesto por cada unidad estructural y, opcionalmente, validar que la suma coincida con un total general del periodo.',
   })
   @ApiCreatedResponse({
     description:
@@ -51,12 +51,7 @@ export class BillingController {
       'No hay unidades privadas en el condominio o ya existen cuotas para el periodo solicitado.',
   })
   async generateFees(@Body() data: GenerateFeesDto) {
-    return await this.billingService.generateMonthlyFees(
-      data.condominiumId,
-      data.period,
-      data.baseAmount,
-      data.useCoefficient,
-    );
+    return await this.billingService.generateMonthlyFees(data);
   }
 
   @Get('statement/:unitId')

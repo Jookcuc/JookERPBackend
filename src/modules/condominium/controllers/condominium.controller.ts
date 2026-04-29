@@ -1,14 +1,13 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
   Param,
-  UseGuards,
+  Post,
+  Put,
   Request,
+  UseGuards,
 } from '@nestjs/common';
-import { CondominiumService } from '../services/condominium.service';
-import { CreateCondominiumDto } from '../dto/create-condominium.dto';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -19,10 +18,13 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guard/jwt-auth.guard';
+import { CreateCondominiumDto } from '../dto/create-condominium.dto';
 import {
   CondominiumDetailResponseDto,
   CondominiumSummaryResponseDto,
 } from '../dto/condominium-response.dto';
+import { UpdateCondominiumDto } from '../dto/update-condominium.dto';
+import { CondominiumService } from '../services/condominium.service';
 
 @ApiTags('Condominium Management')
 @ApiBearerAuth('JWT-auth')
@@ -35,7 +37,7 @@ export class CondominiumController {
   @ApiOperation({
     summary: 'Crear un nuevo condominio',
     description:
-      'Registra un condominio para la empresa autenticada. El `companyId` no se envia en el body; se toma automaticamente del token JWT. Tambien puede recibir `structuralUnits` y, dentro de cada una, `propertyUnits` para crear toda la estructura en una sola solicitud.',
+      'Registra un condominio para la empresa autenticada. La estructura interna se administra por endpoints separados de unidades estructurales.',
   })
   @ApiCreatedResponse({
     description: 'Condominio creado exitosamente.',
@@ -82,5 +84,33 @@ export class CondominiumController {
   })
   async findOne(@Param('id') id: string, @Request() req) {
     return await this.condominiumService.findOne(+id, req.user.companyId);
+  }
+
+  @Put(':id')
+  @ApiOperation({
+    summary: 'Editar condominio',
+    description:
+      'Actualiza los datos generales del condominio sin modificar sus unidades estructurales.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    example: 1,
+    description: 'ID del condominio a editar.',
+  })
+  @ApiOkResponse({
+    description: 'Condominio actualizado correctamente.',
+    type: CondominiumDetailResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description:
+      'No existe un condominio con ese ID para la empresa autenticada.',
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateCondominiumDto,
+    @Request() req,
+  ) {
+    return await this.condominiumService.update(+id, dto, req.user.companyId);
   }
 }

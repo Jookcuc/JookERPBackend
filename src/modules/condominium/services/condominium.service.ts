@@ -3,8 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Condominium } from '../entities/condominium.entity';
 import { CreateCondominiumDto } from '../dto/create-condominium.dto';
-import { StructuralUnit } from '../entities/structural-unit.entity';
-import { PropertyUnit } from '../entities/property-unit.entity';
+import { UpdateCondominiumDto } from '../dto/update-condominium.dto';
 
 @Injectable()
 export class CondominiumService {
@@ -17,47 +16,13 @@ export class CondominiumService {
     createDto: CreateCondominiumDto,
     companyId: number,
   ): Promise<Condominium> {
-    const { structuralUnits = [], ...condominiumData } = createDto;
+    const condominium = this.condominiumRepository.create({
+      ...createDto,
+      companyId,
+    });
 
-    const condominiumId = await this.condominiumRepository.manager.transaction(
-      async (manager) => {
-        const condominium = await manager.save(
-          Condominium,
-          manager.create(Condominium, {
-            ...condominiumData,
-            companyId,
-          }),
-        );
-
-        for (const structuralUnitDto of structuralUnits) {
-          const { propertyUnits = [], ...structuralUnitData } =
-            structuralUnitDto;
-
-          const structuralUnit = await manager.save(
-            StructuralUnit,
-            manager.create(StructuralUnit, {
-              ...structuralUnitData,
-              condominiumId: condominium.id,
-            }),
-          );
-
-          if (propertyUnits.length > 0) {
-            const propertyUnitsToCreate = propertyUnits.map((propertyUnit) =>
-              manager.create(PropertyUnit, {
-                ...propertyUnit,
-                structuralUnitId: structuralUnit.id,
-              }),
-            );
-
-            await manager.save(PropertyUnit, propertyUnitsToCreate);
-          }
-        }
-
-        return condominium.id;
-      },
-    );
-
-    return await this.findOne(condominiumId, companyId);
+    const created = await this.condominiumRepository.save(condominium);
+    return await this.findOne(created.id, companyId);
   }
 
   async findAll(companyId: number): Promise<Condominium[]> {
@@ -78,5 +43,18 @@ export class CondominiumService {
     }
 
     return condominium;
+  }
+
+  async update(
+    id: number,
+    dto: UpdateCondominiumDto,
+    companyId: number,
+  ): Promise<Condominium> {
+    const condominium = await this.findOne(id, companyId);
+
+    Object.assign(condominium, dto);
+    await this.condominiumRepository.save(condominium);
+
+    return await this.findOne(id, companyId);
   }
 }

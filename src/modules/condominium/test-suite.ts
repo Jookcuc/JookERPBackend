@@ -27,25 +27,30 @@ export class CondominiumTestController {
   ) {}
 
   @Get('run-full-test')
-  @ApiOperation({ summary: 'Automatically creates dummy data and tests all condominium logic' })
+  @ApiOperation({
+    summary: 'Automatically creates dummy data and tests all condominium logic',
+  })
   async runTest(@Request() req) {
     const companyId = req.user.companyId;
     const results: any[] = [];
 
     try {
       // 1. Create Condominium
-      const condo = await this.condoService.create({
-        name: 'Test Residencial Jook',
-        address: 'Calle Falsa 123',
-        nit: '123456789-0',
-      }, companyId);
+      const condo = await this.condoService.create(
+        {
+          name: 'Test Residencial Jook',
+          address: 'Calle Falsa 123',
+          nit: '123456789-0',
+        },
+        companyId,
+      );
       results.push({ step: 'Create Condo', status: 'OK', data: condo });
 
       // 2. Create Structural Unit (Tower)
       const tower = this.sUnitRepo.create({
         condominiumId: condo.id,
         name: 'Torre Pruebas',
-        type: StructuralUnitType.TORRE
+        type: StructuralUnitType.TORRE,
       });
       const savedTower = await this.sUnitRepo.save(tower);
       results.push({ step: 'Create Tower', status: 'OK', id: savedTower.id });
@@ -55,27 +60,53 @@ export class CondominiumTestController {
         structuralUnitId: savedTower.id,
         number: '101',
         type: PropertyUnitType.APARTAMENTO,
-        coefficientPercentage: 50.0 // 50%
+        coefficientPercentage: 50.0, // 50%
       });
       const unit2 = this.pUnitRepo.create({
         structuralUnitId: savedTower.id,
         number: '102',
         type: PropertyUnitType.APARTAMENTO,
-        coefficientPercentage: 50.0 // 50%
+        coefficientPercentage: 50.0, // 50%
       });
       await this.pUnitRepo.save([unit1, unit2]);
       results.push({ step: 'Create Units', status: 'OK' });
 
       // 4. Generate Fees
-      const fees: any = await this.billingService.generateMonthlyFees(condo.id, '2026-06', 1000000, true);
-      results.push({ step: 'Generate Fees', status: 'OK', count: fees.length, sampleAmount: fees[0]?.amount });
+      const fees: any = await this.billingService.generateMonthlyFees({
+        condominiumId: condo.id,
+        period: '2026-06',
+        totalAmount: 1000000,
+        structuralUnitAllocations: [
+          {
+            structuralUnitId: savedTower.id,
+            amount: 1000000,
+            useCoefficient: false,
+          },
+        ],
+      });
+      results.push({
+        step: 'Generate Fees',
+        status: 'OK',
+        count: fees.length,
+        sampleAmount: fees[0]?.amount,
+      });
 
       // 5. Check Portfolio
-      const portfolio = await this.billingService.getCondominiumPortfolio(condo.id);
-      results.push({ step: 'Check Portfolio', status: 'OK', towers: portfolio.length });
+      const portfolio = await this.billingService.getCondominiumPortfolio(
+        condo.id,
+      );
+      results.push({
+        step: 'Check Portfolio',
+        status: 'OK',
+        towers: portfolio.length,
+      });
 
       // 6. Access Control
-      const entry = await this.opService.registerEntry(unit1.id, 'Visitante de Prueba', '123456');
+      const entry = await this.opService.registerEntry(
+        unit1.id,
+        'Visitante de Prueba',
+        '123456',
+      );
       results.push({ step: 'Register Entry', status: 'OK', logId: entry.id });
 
       await this.opService.registerExit(entry.id);
@@ -84,14 +115,14 @@ export class CondominiumTestController {
       return {
         success: true,
         message: 'All tests passed successfully',
-        summary: results
+        summary: results,
       };
     } catch (error) {
       return {
         success: false,
         message: 'Test failed at some point',
         error: error.message,
-        summary: results
+        summary: results,
       };
     }
   }

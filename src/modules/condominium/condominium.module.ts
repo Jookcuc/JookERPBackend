@@ -13,9 +13,11 @@ import { CondoDocument } from './entities/condo-document.entity';
 import { CondominiumService } from './services/condominium.service';
 import { BillingService } from './services/billing.service';
 import { OperationService } from './services/operation.service';
+import { StructuralUnitService } from './services/structural-unit.service';
 import { CondominiumController } from './controllers/condominium.controller';
 import { BillingController } from './controllers/billing.controller';
 import { OperationController } from './controllers/operation.controller';
+import { StructuralUnitController } from './controllers/structural-unit.controller';
 import { CondominiumTestController } from './test-suite';
 
 @Module({
@@ -37,17 +39,20 @@ import { CondominiumTestController } from './test-suite';
     CondominiumController,
     BillingController,
     OperationController,
+    StructuralUnitController,
     CondominiumTestController,
   ],
   providers: [
     CondominiumService,
     BillingService,
     OperationService,
+    StructuralUnitService,
   ],
   exports: [
     CondominiumService,
     BillingService,
     OperationService,
+    StructuralUnitService,
   ],
 })
 export class CondominiumModule {}

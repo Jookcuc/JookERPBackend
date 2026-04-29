@@ -1,9 +1,15 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CondoFee, FeeStatus, FeeType } from '../entities/condo-fee.entity';
 import { PropertyUnit } from '../entities/property-unit.entity';
 import { StructuralUnit } from '../entities/structural-unit.entity';
+import { GenerateFeesDto } from '../dto/generate-fees.dto';
+
+type UnitSplitInput = {
+  unit: PropertyUnit;
+  useCoefficient: boolean;
+};
 
 @Injectable()
 export class BillingService {
@@ -16,37 +22,63 @@ export class BillingService {
     private readonly structuralUnitRepository: Repository<StructuralUnit>,
   ) {}
 
-  /**
-   * Generates monthly fees for all units in a condominium.
-   * @param condominiumId 
-   * @param period YYYY-MM
-   * @param baseAmount Total amount to distribute or fixed amount per unit
-   */
-  async generateMonthlyFees(
-    condominiumId: number,
-    period: string,
-    baseAmount: number,
-    useCoefficient: boolean = true,
-  ) {
-    // Check if fees already exist for this period
+  async generateMonthlyFees(data: GenerateFeesDto) {
+    const { condominiumId, period, totalAmount, structuralUnitAllocations } =
+      data;
+
     const structuralUnits = await this.structuralUnitRepository.find({
-      where: { condominiumId },
-    });
-    const structuralUnitIds = structuralUnits.map((u) => u.id);
-
-    if (structuralUnitIds.length === 0) return { message: 'No structural units found' };
-
-    const units = await this.propertyUnitRepository.find({
-      where: { structuralUnitId: In(structuralUnitIds) },
+      where: {
+        condominiumId,
+        id: In(structuralUnitAllocations.map((item) => item.structuralUnitId)),
+      },
+      relations: ['propertyUnits'],
     });
 
-    if (units.length === 0) {
-      throw new BadRequestException('No property units found in this condominium');
+    if (structuralUnits.length === 0) {
+      return { message: 'No structural units found' };
+    }
+
+    if (structuralUnits.length !== structuralUnitAllocations.length) {
+      throw new BadRequestException(
+        'One or more structural units do not belong to this condominium',
+      );
+    }
+
+    const requestedIds = new Set(
+      structuralUnitAllocations.map((item) => item.structuralUnitId),
+    );
+
+    if (requestedIds.size !== structuralUnitAllocations.length) {
+      throw new BadRequestException(
+        'Structural unit allocations cannot contain duplicate structuralUnitId values',
+      );
+    }
+
+    const distributedTotal = structuralUnitAllocations.reduce(
+      (acc, item) => acc + Number(item.amount),
+      0,
+    );
+
+    if (
+      totalAmount !== undefined &&
+      Number(totalAmount.toFixed(2)) !== Number(distributedTotal.toFixed(2))
+    ) {
+      throw new BadRequestException(
+        'The totalAmount must match the sum of the structural unit allocations',
+      );
+    }
+
+    const allUnits = structuralUnits.flatMap((item) => item.propertyUnits);
+
+    if (allUnits.length === 0) {
+      throw new BadRequestException(
+        'No property units found in the selected structural units',
+      );
     }
 
     const existingFees = await this.condoFeeRepository.find({
       where: {
-        propertyUnitId: In(units.map((u) => u.id)),
+        propertyUnitId: In(allUnits.map((unit) => unit.id)),
         period,
         type: FeeType.ORDINARIA,
       },
@@ -56,23 +88,47 @@ export class BillingService {
       throw new BadRequestException(`Fees for period ${period} already exist`);
     }
 
-    const feesToCreate = units.map((unit) => {
-      let amount = baseAmount;
-      if (useCoefficient) {
-        // distribute based on coefficient (percentage)
-        // Usually: (Total Budget * unit coefficient) / 100
-        amount = Number(((baseAmount * Number(unit.coefficientPercentage)) / 100).toFixed(2));
+    const structuralUnitsById = new Map(
+      structuralUnits.map((structuralUnit) => [
+        structuralUnit.id,
+        structuralUnit,
+      ]),
+    );
+
+    const feesToCreate = structuralUnitAllocations.flatMap((allocation) => {
+      const structuralUnit = structuralUnitsById.get(
+        allocation.structuralUnitId,
+      );
+
+      if (!structuralUnit || structuralUnit.propertyUnits.length === 0) {
+        throw new BadRequestException(
+          `Structural unit ${allocation.structuralUnitId} has no property units`,
+        );
       }
 
-      return this.condoFeeRepository.create({
-        propertyUnitId: unit.id,
-        amount,
-        period,
-        dueDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 5), // Next month 5th
-        type: FeeType.ORDINARIA,
-        status: FeeStatus.PENDIENTE,
-        description: `Cuota ordinaria periodo ${period}`,
-      });
+      const splitUnits = this.splitAmountAcrossUnits(
+        allocation.amount,
+        structuralUnit.propertyUnits.map((unit) => ({
+          unit,
+          useCoefficient: allocation.useCoefficient ?? false,
+        })),
+      );
+
+      return splitUnits.map(({ unit, amount }) =>
+        this.condoFeeRepository.create({
+          propertyUnitId: unit.id,
+          amount,
+          period,
+          dueDate: new Date(
+            new Date().getFullYear(),
+            new Date().getMonth() + 1,
+            5,
+          ),
+          type: FeeType.ORDINARIA,
+          status: FeeStatus.PENDIENTE,
+          description: `Cuota ordinaria periodo ${period} - ${structuralUnit.name}`,
+        }),
+      );
     });
 
     return await this.condoFeeRepository.save(feesToCreate);
@@ -85,11 +141,7 @@ export class BillingService {
     });
   }
 
-  /**
-   * Returns a list of all units in a condominium with their total balance and state.
-   */
   async getCondominiumPortfolio(condominiumId: number) {
-    // This is a simplified version. Usually involves complex joins.
     const structuralUnits = await this.structuralUnitRepository.find({
       where: { condominiumId },
       relations: ['propertyUnits'],
@@ -108,7 +160,9 @@ export class BillingService {
               return acc;
             }, 0);
 
-            const pendingFeesCount = fees.filter((f) => f.status !== FeeStatus.PAGADA).length;
+            const pendingFeesCount = fees.filter(
+              (f) => f.status !== FeeStatus.PAGADA,
+            ).length;
 
             return {
               unitNumber: unit.number,
@@ -116,7 +170,7 @@ export class BillingService {
               status: unit.status,
               totalDue,
               pendingFeesCount,
-              lastFees: fees.slice(0, 3), // return last 3
+              lastFees: fees.slice(0, 3),
             };
           }),
         );
@@ -130,5 +184,75 @@ export class BillingService {
     );
 
     return report;
+  }
+
+  private splitAmountAcrossUnits(
+    totalAmount: number,
+    items: UnitSplitInput[],
+  ): Array<{ unit: PropertyUnit; amount: number }> {
+    if (items.length === 0) {
+      return [];
+    }
+
+    const useCoefficient = items[0].useCoefficient;
+
+    if (useCoefficient) {
+      const totalCoefficient = items.reduce(
+        (acc, item) => acc + Number(item.unit.coefficientPercentage ?? 0),
+        0,
+      );
+
+      if (totalCoefficient <= 0) {
+        throw new BadRequestException(
+          'The selected structural unit requires coefficient-based distribution, but its property units do not have valid coefficientPercentage values',
+        );
+      }
+
+      return this.distributeWithWeights(
+        totalAmount,
+        items.map((item) => ({
+          unit: item.unit,
+          weight: Number(item.unit.coefficientPercentage ?? 0),
+        })),
+      );
+    }
+
+    return this.distributeWithWeights(
+      totalAmount,
+      items.map((item) => ({
+        unit: item.unit,
+        weight: 1,
+      })),
+    );
+  }
+
+  private distributeWithWeights(
+    totalAmount: number,
+    items: Array<{ unit: PropertyUnit; weight: number }>,
+  ): Array<{ unit: PropertyUnit; amount: number }> {
+    const totalInCents = Math.round(Number(totalAmount) * 100);
+    const totalWeight = items.reduce((acc, item) => acc + item.weight, 0);
+
+    if (totalWeight <= 0) {
+      throw new BadRequestException('Invalid distribution weights');
+    }
+
+    let assigned = 0;
+
+    return items.map((item, index) => {
+      let cents = 0;
+
+      if (index === items.length - 1) {
+        cents = totalInCents - assigned;
+      } else {
+        cents = Math.round((totalInCents * item.weight) / totalWeight);
+        assigned += cents;
+      }
+
+      return {
+        unit: item.unit,
+        amount: Number((cents / 100).toFixed(2)),
+      };
+    });
   }
 }
