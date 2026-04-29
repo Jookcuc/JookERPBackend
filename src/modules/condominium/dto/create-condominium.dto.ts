@@ -5,7 +5,6 @@ import {
   IsArray,
   IsEmail,
   IsEnum,
-  IsInt,
   IsNotEmpty,
   IsNumber,
   IsObject,
@@ -68,24 +67,6 @@ export class CreatePropertyUnitDto {
   @IsOptional()
   @IsEnum(PropertyUnitStatus)
   status?: PropertyUnitStatus;
-
-  @ApiPropertyOptional({
-    example: 88,
-    description: 'ID del propietario asociado, si ya existe.',
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  ownerId?: number;
-
-  @ApiPropertyOptional({
-    example: 44,
-    description: 'ID del residente asociado, si ya existe.',
-  })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  residentId?: number;
 }
 
 export class CreateStructuralUnitDto {
