@@ -35,7 +35,7 @@ export class CondominiumController {
   @ApiOperation({
     summary: 'Crear un nuevo condominio',
     description:
-      'Registra un condominio para la empresa autenticada. El `companyId` no se envía en el body; se toma automáticamente del token JWT.',
+      'Registra un condominio para la empresa autenticada. El `companyId` no se envia en el body; se toma automaticamente del token JWT. Tambien puede recibir `structuralUnits` y, dentro de cada una, `propertyUnits` para crear toda la estructura en una sola solicitud.',
   })
   @ApiCreatedResponse({
     description: 'Condominio creado exitosamente.',
