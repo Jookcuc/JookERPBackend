@@ -1,33 +1,59 @@
-import { IsString, IsOptional, IsNotEmpty, IsNumber, IsEmail } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsString,
+  IsOptional,
+  IsNotEmpty,
+  IsEmail,
+  IsObject,
+} from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateCondominiumDto {
-  @ApiProperty({ example: 'Edificio Parque Central' })
+  @ApiProperty({
+    example: 'Edificio Parque Central',
+    description: 'Nombre comercial o identificador principal del condominio.',
+  })
   @IsString()
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ example: 'Calle 10 # 45-20', required: false })
+  @ApiPropertyOptional({
+    example: 'Calle 10 # 45-20',
+    description: 'Dirección física del condominio.',
+  })
   @IsString()
   @IsOptional()
   address?: string;
 
-  @ApiProperty({ example: '900.123.456-1', required: false })
+  @ApiPropertyOptional({
+    example: '900.123.456-1',
+    description: 'NIT o documento tributario asociado al condominio.',
+  })
   @IsString()
   @IsOptional()
   nit?: string;
 
-  @ApiProperty({ example: '6012345678', required: false })
+  @ApiPropertyOptional({
+    example: '6012345678',
+    description: 'Teléfono de contacto administrativo.',
+  })
   @IsString()
   @IsOptional()
   phone?: string;
 
-  @ApiProperty({ example: 'admin@parquecentral.com', required: false })
+  @ApiPropertyOptional({
+    example: 'admin@parquecentral.com',
+    description: 'Correo de contacto del condominio.',
+  })
   @IsEmail()
   @IsOptional()
   email?: string;
 
-  @ApiProperty({ example: { currency: 'COP' }, required: false })
+  @ApiPropertyOptional({
+    example: { currency: 'COP', timezone: 'America/Bogota' },
+    description:
+      'Configuración adicional libre del condominio en formato JSON.',
+  })
   @IsOptional()
+  @IsObject()
   config?: any;
 }
