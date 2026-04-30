@@ -120,6 +120,32 @@ export class StructuralUnitService {
     return await this.findOne(id, companyId);
   }
 
+  async remove(id: number, companyId: number): Promise<void> {
+    const structuralUnit = await this.findOne(id, companyId);
+    await this.structuralUnitRepository.remove(structuralUnit);
+  }
+
+  async removePropertyUnit(
+    propertyUnitId: number,
+    companyId: number,
+  ): Promise<void> {
+    const propertyUnit = await this.propertyUnitRepository.findOne({
+      where: { id: propertyUnitId },
+      relations: ['structuralUnit', 'structuralUnit.condominium'],
+    });
+
+    if (
+      !propertyUnit ||
+      propertyUnit.structuralUnit.condominium.companyId !== companyId
+    ) {
+      throw new NotFoundException(
+        `Property unit with ID ${propertyUnitId} not found`,
+      );
+    }
+
+    await this.propertyUnitRepository.remove(propertyUnit);
+  }
+
   private async ensureCondominiumBelongsToCompany(
     condominiumId: number,
     companyId: number,

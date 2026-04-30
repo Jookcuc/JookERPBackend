@@ -40,6 +40,8 @@ export class Condominium {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @OneToMany(() => StructuralUnit, (unit) => unit.condominium)
+  @OneToMany(() => StructuralUnit, (unit) => unit.condominium, {
+    cascade: true,
+  })
   structuralUnits: StructuralUnit[];
 }

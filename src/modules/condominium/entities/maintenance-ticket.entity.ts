@@ -64,11 +64,11 @@ export class MaintenanceTicket {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @ManyToOne(() => Condominium)
+  @ManyToOne(() => Condominium, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'condominium_id' })
   condominium: Condominium;
 
-  @ManyToOne(() => PropertyUnit)
+  @ManyToOne(() => PropertyUnit, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'property_unit_id' })
   propertyUnit: PropertyUnit;
 }

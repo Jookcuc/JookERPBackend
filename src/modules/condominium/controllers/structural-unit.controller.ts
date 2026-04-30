@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -121,5 +122,59 @@ export class StructuralUnitController {
       dto,
       req.user.companyId,
     );
+  }
+
+  @Delete('property-unit/:propertyUnitId')
+  @ApiOperation({
+    summary: 'Eliminar unidad privada',
+    description:
+      'Elimina un apartamento, local, parqueadero u otra unidad privada junto con sus cuotas, registros de acceso y perfiles de residentes asociados.',
+  })
+  @ApiParam({
+    name: 'propertyUnitId',
+    type: Number,
+    example: 101,
+    description: 'ID de la unidad privada a eliminar.',
+  })
+  @ApiOkResponse({
+    description: 'Unidad privada eliminada correctamente.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'No existe una unidad privada con ese ID para la empresa autenticada.',
+  })
+  async removePropertyUnit(
+    @Param('propertyUnitId') propertyUnitId: string,
+    @Request() req,
+  ) {
+    await this.structuralUnitService.removePropertyUnit(
+      +propertyUnitId,
+      req.user.companyId,
+    );
+    return { message: 'Property unit deleted successfully' };
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Eliminar unidad estructural',
+    description:
+      'Elimina una torre, bloque, etapa o manzana junto con todas sus unidades privadas y registros asociados (cuotas, accesos, perfiles de residentes).',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    example: 14,
+    description: 'ID de la unidad estructural a eliminar.',
+  })
+  @ApiOkResponse({
+    description: 'Unidad estructural eliminada correctamente.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'No existe una unidad estructural con ese ID para la empresa autenticada.',
+  })
+  async remove(@Param('id') id: string, @Request() req) {
+    await this.structuralUnitService.remove(+id, req.user.companyId);
+    return { message: 'Structural unit deleted successfully' };
   }
 }

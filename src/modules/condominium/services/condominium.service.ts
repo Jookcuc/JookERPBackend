@@ -57,4 +57,9 @@ export class CondominiumService {
 
     return await this.findOne(id, companyId);
   }
+
+  async remove(id: number, companyId: number): Promise<void> {
+    const condominium = await this.findOne(id, companyId);
+    await this.condominiumRepository.remove(condominium);
+  }
 }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -112,5 +113,29 @@ export class CondominiumController {
     @Request() req,
   ) {
     return await this.condominiumService.update(+id, dto, req.user.companyId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Eliminar condominio',
+    description:
+      'Elimina un condominio y toda su estructura interna: unidades estructurales, unidades privadas, cuotas, tickets, documentos, comunicaciones, áreas comunes y registros de acceso asociados.',
+  })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    example: 1,
+    description: 'ID del condominio a eliminar.',
+  })
+  @ApiOkResponse({
+    description: 'Condominio eliminado correctamente.',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'No existe un condominio con ese ID para la empresa autenticada.',
+  })
+  async remove(@Param('id') id: string, @Request() req) {
+    await this.condominiumService.remove(+id, req.user.companyId);
+    return { message: 'Condominium deleted successfully' };
   }
 }

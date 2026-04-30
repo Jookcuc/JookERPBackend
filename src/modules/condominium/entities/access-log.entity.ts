@@ -44,7 +44,7 @@ export class AccessLog {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @ManyToOne(() => PropertyUnit)
+  @ManyToOne(() => PropertyUnit, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'property_unit_id' })
   propertyUnit: PropertyUnit;
 }

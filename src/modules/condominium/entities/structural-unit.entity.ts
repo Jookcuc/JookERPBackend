@@ -43,10 +43,14 @@ export class StructuralUnit {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @ManyToOne(() => Condominium, (condo) => condo.structuralUnits)
+  @ManyToOne(() => Condominium, (condo) => condo.structuralUnits, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'condominium_id' })
   condominium: Condominium;
 
-  @OneToMany(() => PropertyUnit, (unit) => unit.structuralUnit)
+  @OneToMany(() => PropertyUnit, (unit) => unit.structuralUnit, {
+    cascade: true,
+  })
   propertyUnits: PropertyUnit[];
 }

@@ -52,7 +52,7 @@ export class Communication {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @ManyToOne(() => Condominium)
+  @ManyToOne(() => Condominium, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'condominium_id' })
   condominium: Condominium;
 }

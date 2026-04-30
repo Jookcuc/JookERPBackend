@@ -54,7 +54,7 @@ export class ResidentProfile {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => PropertyUnit)
+  @ManyToOne(() => PropertyUnit, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'property_unit_id' })
   propertyUnit: PropertyUnit;
 }

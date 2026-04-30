@@ -74,7 +74,9 @@ export class PropertyUnit {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  @ManyToOne(() => StructuralUnit, (unit) => unit.propertyUnits)
+  @ManyToOne(() => StructuralUnit, (unit) => unit.propertyUnits, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'structural_unit_id' })
   structuralUnit: StructuralUnit;
 }
