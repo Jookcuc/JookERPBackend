@@ -35,7 +35,6 @@ export class CondominiumTestController {
     const results: any[] = [];
 
     try {
-      // 1. Create Condominium
       const condo = await this.condoService.create(
         {
           name: 'Test Residencial Jook',
@@ -46,7 +45,6 @@ export class CondominiumTestController {
       );
       results.push({ step: 'Create Condo', status: 'OK', data: condo });
 
-      // 2. Create Structural Unit (Tower)
       const tower = this.sUnitRepo.create({
         condominiumId: condo.id,
         name: 'Torre Pruebas',
@@ -55,23 +53,19 @@ export class CondominiumTestController {
       const savedTower = await this.sUnitRepo.save(tower);
       results.push({ step: 'Create Tower', status: 'OK', id: savedTower.id });
 
-      // 3. Create Property Units
       const unit1 = this.pUnitRepo.create({
         structuralUnitId: savedTower.id,
         number: '101',
         type: PropertyUnitType.APARTAMENTO,
-        coefficientPercentage: 50.0, // 50%
       });
       const unit2 = this.pUnitRepo.create({
         structuralUnitId: savedTower.id,
         number: '102',
         type: PropertyUnitType.APARTAMENTO,
-        coefficientPercentage: 50.0, // 50%
       });
       await this.pUnitRepo.save([unit1, unit2]);
       results.push({ step: 'Create Units', status: 'OK' });
 
-      // 4. Generate Fees
       const fees: any = await this.billingService.generateMonthlyFees({
         condominiumId: condo.id,
         period: '2026-06',
@@ -80,7 +74,6 @@ export class CondominiumTestController {
           {
             structuralUnitId: savedTower.id,
             amount: 1000000,
-            useCoefficient: false,
           },
         ],
       });
@@ -91,7 +84,6 @@ export class CondominiumTestController {
         sampleAmount: fees[0]?.amount,
       });
 
-      // 5. Check Portfolio
       const portfolio = await this.billingService.getCondominiumPortfolio(
         condo.id,
       );
@@ -101,7 +93,6 @@ export class CondominiumTestController {
         towers: portfolio.length,
       });
 
-      // 6. Access Control
       const entry = await this.opService.registerEntry(
         unit1.id,
         'Visitante de Prueba',

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { BillingService } from '../services/billing.service';
 import { JwtAuthGuard } from '../../../common/guard/jwt-auth.guard';
 import {
@@ -29,13 +29,13 @@ export class BillingController {
 
   @Post('generate-fees')
   @ApiOperation({
-    summary: 'Generar cuotas mensuales de administración',
+    summary: 'Generar cuotas mensuales de administracion',
     description:
-      'Genera cuotas ordinarias para las unidades privadas del condominio en el periodo indicado. El body permite definir un presupuesto por cada unidad estructural y, opcionalmente, validar que la suma coincida con un total general del periodo.',
+      'Genera cuotas ordinarias para las unidades privadas del condominio en el periodo indicado. El body permite definir un presupuesto por cada unidad estructural y, opcionalmente, validar que la suma coincida con un total general del periodo. Cada monto se reparte en partes iguales entre las unidades privadas de esa unidad estructural.',
   })
   @ApiCreatedResponse({
     description:
-      'Cuotas generadas correctamente. Si el condominio todavía no tiene unidades estructurales, devuelve un mensaje informativo.',
+      'Cuotas generadas correctamente. Si el condominio todavia no tiene unidades estructurales, devuelve un mensaje informativo.',
     schema: {
       oneOf: [
         { $ref: getSchemaPath(EmptyStructuralUnitsResponseDto) },
@@ -48,7 +48,7 @@ export class BillingController {
   })
   @ApiBadRequestResponse({
     description:
-      'No hay unidades privadas en el condominio o ya existen cuotas para el periodo solicitado.',
+      'No hay unidades privadas en el condominio, la suma total no coincide o ya existen cuotas para el periodo solicitado.',
   })
   async generateFees(@Body() data: GenerateFeesDto) {
     return await this.billingService.generateMonthlyFees(data);
@@ -58,7 +58,7 @@ export class BillingController {
   @ApiOperation({
     summary: 'Consultar estado de cuenta por unidad privada',
     description:
-      'Lista el historial de cuotas de una unidad privada, ordenado del periodo más reciente al más antiguo.',
+      'Lista el historial de cuotas de una unidad privada, ordenado del periodo mas reciente al mas antiguo.',
   })
   @ApiParam({
     name: 'unitId',
@@ -79,7 +79,7 @@ export class BillingController {
   @ApiOperation({
     summary: 'Consultar cartera consolidada del condominio',
     description:
-      'Agrupa la cartera por torre o bloque y resume saldo pendiente, número de cuotas vencidas y últimas cuotas registradas por unidad privada.',
+      'Agrupa la cartera por torre o bloque y resume saldo pendiente, numero de cuotas vencidas y ultimas cuotas registradas por unidad privada.',
   })
   @ApiParam({
     name: 'condoId',

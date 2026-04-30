@@ -3,7 +3,6 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsArray,
-  IsBoolean,
   IsInt,
   IsNumber,
   IsOptional,
@@ -32,16 +31,6 @@ export class StructuralUnitFeeAllocationDto {
   @IsNumber()
   @Min(0)
   amount: number;
-
-  @ApiPropertyOptional({
-    example: false,
-    default: false,
-    description:
-      'Si es `true`, reparte el monto usando coeficientes de las unidades privadas de esta unidad estructural. Si es `false`, reparte en partes iguales.',
-  })
-  @IsOptional()
-  @IsBoolean()
-  useCoefficient?: boolean;
 }
 
 export class GenerateFeesDto {

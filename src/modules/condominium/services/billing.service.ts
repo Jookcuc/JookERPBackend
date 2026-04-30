@@ -6,11 +6,6 @@ import { PropertyUnit } from '../entities/property-unit.entity';
 import { StructuralUnit } from '../entities/structural-unit.entity';
 import { GenerateFeesDto } from '../dto/generate-fees.dto';
 
-type UnitSplitInput = {
-  unit: PropertyUnit;
-  useCoefficient: boolean;
-};
-
 @Injectable()
 export class BillingService {
   constructor(
@@ -108,10 +103,7 @@ export class BillingService {
 
       const splitUnits = this.splitAmountAcrossUnits(
         allocation.amount,
-        structuralUnit.propertyUnits.map((unit) => ({
-          unit,
-          useCoefficient: allocation.useCoefficient ?? false,
-        })),
+        structuralUnit.propertyUnits,
       );
 
       return splitUnits.map(({ unit, amount }) =>
@@ -188,55 +180,14 @@ export class BillingService {
 
   private splitAmountAcrossUnits(
     totalAmount: number,
-    items: UnitSplitInput[],
+    items: PropertyUnit[],
   ): Array<{ unit: PropertyUnit; amount: number }> {
     if (items.length === 0) {
       return [];
     }
 
-    const useCoefficient = items[0].useCoefficient;
-
-    if (useCoefficient) {
-      const totalCoefficient = items.reduce(
-        (acc, item) => acc + Number(item.unit.coefficientPercentage ?? 0),
-        0,
-      );
-
-      if (totalCoefficient <= 0) {
-        throw new BadRequestException(
-          'The selected structural unit requires coefficient-based distribution, but its property units do not have valid coefficientPercentage values',
-        );
-      }
-
-      return this.distributeWithWeights(
-        totalAmount,
-        items.map((item) => ({
-          unit: item.unit,
-          weight: Number(item.unit.coefficientPercentage ?? 0),
-        })),
-      );
-    }
-
-    return this.distributeWithWeights(
-      totalAmount,
-      items.map((item) => ({
-        unit: item.unit,
-        weight: 1,
-      })),
-    );
-  }
-
-  private distributeWithWeights(
-    totalAmount: number,
-    items: Array<{ unit: PropertyUnit; weight: number }>,
-  ): Array<{ unit: PropertyUnit; amount: number }> {
     const totalInCents = Math.round(Number(totalAmount) * 100);
-    const totalWeight = items.reduce((acc, item) => acc + item.weight, 0);
-
-    if (totalWeight <= 0) {
-      throw new BadRequestException('Invalid distribution weights');
-    }
-
+    const baseShare = Math.floor(totalInCents / items.length);
     let assigned = 0;
 
     return items.map((item, index) => {
@@ -245,12 +196,12 @@ export class BillingService {
       if (index === items.length - 1) {
         cents = totalInCents - assigned;
       } else {
-        cents = Math.round((totalInCents * item.weight) / totalWeight);
+        cents = baseShare;
         assigned += cents;
       }
 
       return {
-        unit: item.unit,
+        unit: item,
         amount: Number((cents / 100).toFixed(2)),
       };
     });
