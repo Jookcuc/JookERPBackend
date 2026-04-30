@@ -102,7 +102,20 @@ export class StructuralUnitService {
       structuralUnit.type = dto.type;
     }
 
-    await this.structuralUnitRepository.save(structuralUnit);
+    await this.structuralUnitRepository.manager.transaction(async (manager) => {
+      await manager.save(StructuralUnit, structuralUnit);
+
+      if (dto.propertyUnits?.length) {
+        const newPropertyUnits = dto.propertyUnits.map((unit) =>
+          manager.create(PropertyUnit, {
+            ...unit,
+            structuralUnitId: id,
+          }),
+        );
+
+        await manager.save(PropertyUnit, newPropertyUnits);
+      }
+    });
 
     return await this.findOne(id, companyId);
   }
