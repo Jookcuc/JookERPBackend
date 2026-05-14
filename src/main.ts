@@ -1,7 +1,7 @@
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -11,6 +11,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = configService.get<number>('APP_PORT', 3000);
   const environment = configService.get<string>('NODE_ENV', 'development');
+
   app.enableCors({
     origin: true,
     credentials: true,
@@ -44,7 +45,7 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
-    .addTag('Authentication', 'Endpoints de autenticación y registro')
+    .addTag('Authentication', 'Endpoints de autenticacion y registro')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -56,14 +57,12 @@ async function bootstrap() {
 
   try {
     await app.listen(port);
-    logger.log(`Aplicación corriendo en: http://localhost:${port}`);
+    logger.log(`Aplicacion corriendo en: http://localhost:${port}`);
+    logger.log(`Documentacion Swagger: http://localhost:${port}/api/docs`);
+    logger.log(`Entorno: ${environment}`);
   } catch (error) {
-    logger.error('Error al arrancar la aplicación:', error);
+    logger.error('Error al arrancar la aplicacion:', error);
   }
-
-
-  logger.log(`Aplicación corriendo en: http://localhost:${port}`);
-  logger.log(`Documentación Swagger: http://localhost:${port}/api/docs`);
-  logger.log(`Entorno: ${environment}`);
 }
+
 bootstrap();

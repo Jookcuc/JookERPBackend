@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+.git
+.env
+.env.*
+*.log
+services/ml-forecast/.venv
+services/**/__pycache__
+services/**/*.pyc

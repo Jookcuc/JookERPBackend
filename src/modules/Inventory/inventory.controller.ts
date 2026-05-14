@@ -22,19 +22,25 @@ import type { Response } from 'express';
 import { CreateDiscountDto } from './dto/create-discount.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { CreateProductTypeDto } from './dto/create-product-type.dto';
+import { DemandForecastQueryDto } from './dto/demand-forecast-query.dto';
 import { FilterDiscountDto } from './dto/filter-discount.dto';
 import { FilterProductDto } from './dto/filter-product.dto';
 import { FilterProductTypeDto } from './dto/filter-product-type.dto';
+import { ReplenishmentRecommendationQueryDto } from './dto/replenishment-recommendation-query.dto';
 import { UpdateDiscountDto } from './dto/update-discount.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UpdateProductTypeDto } from './dto/update-product-type.dto';
+import { InventoryForecastService } from './inventory-forecast.service';
 import { InventoryService } from './inventory.service';
 
 @ApiTags('Inventory')
 @ApiBearerAuth('JWT-auth')
 @Controller('inventory')
 export class InventoryController {
-  constructor(private readonly inventoryService: InventoryService) {}
+  constructor(
+    private readonly inventoryService: InventoryService,
+    private readonly inventoryForecastService: InventoryForecastService,
+  ) {}
 
   @Post('types')
   @ApiOperation({ summary: 'Crear categoria' })
@@ -157,6 +163,38 @@ export class InventoryController {
   @ApiResponse({ status: 200, description: 'Lista simple de productos' })
   findAllProductsList(@Request() req) {
     return this.inventoryService.findAllProductsList(req.user);
+  }
+
+  @Get('forecast/demand')
+  @ApiOperation({
+    summary: 'Pronosticar demanda futura desde facturas historicas de venta',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Serie de pronostico diario por producto, basada en ventas historicas',
+  })
+  getDemandForecast(@Query() filters: DemandForecastQueryDto, @Request() req) {
+    return this.inventoryForecastService.getDemandForecast(filters, req.user);
+  }
+
+  @Get('replenishment/recommendations')
+  @ApiOperation({
+    summary: 'Recomendar reabastecimiento automatico segun demanda y lead time',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Productos priorizados con punto de reorden, stock objetivo y cantidad sugerida',
+  })
+  getReplenishmentRecommendations(
+    @Query() filters: ReplenishmentRecommendationQueryDto,
+    @Request() req,
+  ) {
+    return this.inventoryForecastService.getReplenishmentRecommendations(
+      filters,
+      req.user,
+    );
   }
 
   @Get('products/:id')

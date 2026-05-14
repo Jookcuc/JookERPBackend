@@ -1,4 +1,4 @@
-<p align="center">
+ <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
@@ -24,6 +24,47 @@
 ## Description
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+
+## Monorepo services
+
+This repository contains:
+
+- `src/`: NestJS ERP API.
+- `services/ml-forecast/`: Python FastAPI service for Prophet demand forecasting.
+
+The inventory forecast endpoint uses the Python ML service only when
+`ML_FORECAST_URL` is configured. If the ML service is unavailable, the API falls
+back to the local statistical baseline so inventory screens keep working.
+
+```bash
+# terminal 1: Python ML service
+$ cd services/ml-forecast
+$ python -m venv .venv
+$ .venv\Scripts\activate
+$ python -m pip install -r requirements.txt
+$ python -m uvicorn app.main:app --host 0.0.0.0 --port 8001
+
+# terminal 2: NestJS API
+$ set ML_FORECAST_URL=http://localhost:8001
+$ yarn run start:dev
+```
+
+You can also use the root helpers:
+
+```bash
+$ npm run ml:venv
+$ npm run ml:install
+$ npm run ml:start
+$ npm run dev:all
+```
+
+Docker Compose can build and run the NestJS API with the ML service wired over
+the internal Compose network:
+
+```bash
+$ Copy-Item .env.example .env
+$ npm run compose:up
+```
 
 ## Project setup
 
