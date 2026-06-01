@@ -18,6 +18,7 @@ import { TransactionsModule } from './modules/transactions/transactions.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { PersonnelModule } from './modules/personnel/personnel.module';
 import { CondominiumModule } from './modules/condominium/condominium.module';
+import { MarketingLeadsModule } from './modules/marketing-leads/marketing-leads.module';
 
 
 @Module({
@@ -61,6 +62,7 @@ import { CondominiumModule } from './modules/condominium/condominium.module';
     DashboardModule,
     PersonnelModule,
     CondominiumModule,
+    MarketingLeadsModule,
   ],
   controllers: [AppController],
   providers: [

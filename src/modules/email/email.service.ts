@@ -340,4 +340,96 @@ this.senderName = this.configService.get<string>('BREVO_SENDER_NAME') || 'Jook E
       </html>
     `;
   }
+
+  async sendSoftwareInfoEmail(
+    email: string,
+    data: {
+      businessName: string;
+      contactName?: string;
+      city?: string;
+      category?: string;
+      unsubscribeUrl?: string;
+    },
+  ): Promise<void> {
+    try {
+      const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+
+      sendSmtpEmail.sender = {
+        name: this.senderName,
+        email: this.senderEmail,
+      };
+
+      sendSmtpEmail.to = [
+        {
+          email,
+          name: data.contactName || data.businessName,
+        },
+      ];
+
+      sendSmtpEmail.subject = 'Consulta rapida sobre su operacion';
+      sendSmtpEmail.htmlContent = this.getSoftwareInfoEmailTemplate(data);
+
+      await this.apiInstance.sendTransacEmail(sendSmtpEmail);
+
+      this.logger.log(`Informacion comercial enviada a ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Error enviando informacion comercial a ${email}:`,
+        error.response?.text || error.message,
+      );
+      throw new Error('Error al enviar la informacion comercial');
+    }
+  }
+
+  private getSoftwareInfoEmailTemplate(data: {
+    businessName: string;
+    contactName?: string;
+    city?: string;
+    category?: string;
+    unsubscribeUrl?: string;
+  }): string {
+    const greeting = data.contactName || data.businessName;
+    const cityText = data.city ? ` en ${data.city}` : '';
+    const categoryText = data.category ? ` de ${data.category}` : '';
+    const unsubscribeBlock = data.unsubscribeUrl
+      ? `<p style="font-size:12px;color:#666;margin-top:24px;">Si prefieres no recibir mas mensajes, puedes darte de baja aqui: <a href="${data.unsubscribeUrl}" style="color:#2563eb;">${data.unsubscribeUrl}</a></p>`
+      : '';
+
+    return `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin:0;background:#ffffff;color:#222;font-family:Arial,sans-serif;">
+        <div style="max-width:640px;margin:0 auto;padding:24px 16px;">
+          <div style="padding:8px 0;">
+            <p style="font-size:16px;line-height:1.7;margin:0 0 16px;">Hola ${greeting},</p>
+            <p style="font-size:16px;line-height:1.7;margin:0 0 16px;">
+              Vi su negocio${cityText} y quise escribirle porque en Jook ERP estamos ayudando a empresas${categoryText} a organizar mejor ventas, inventario y facturacion.
+            </p>
+            <p style="font-size:16px;line-height:1.7;margin:0 0 16px;">
+              Queria hacerle una pregunta puntual: hoy esa parte la manejan con sistema o todavia con Excel, WhatsApp o procesos manuales?
+            </p>
+            <p style="font-size:16px;line-height:1.7;margin:0 0 16px;">
+              Si quiere ver una demo corta, aqui le dejo el video:
+            </p>
+            <p style="font-size:16px;line-height:1.7;margin:0 0 16px;">
+              <a href="https://www.youtube.com/watch?v=FuIgcq--0Ic" style="color:#2563eb;">https://www.youtube.com/watch?v=FuIgcq--0Ic</a>
+            </p>
+            <p style="font-size:16px;line-height:1.7;margin:0 0 16px;">
+              Si le interesa, con gusto le comparto mas informacion o coordinamos una demo breve enfocada en su negocio.
+            </p>
+            <p style="font-size:14px;line-height:1.7;color:#444;margin:20px 0 0;">
+              Saludos,<br>
+              Equipo Jook ERP
+            </p>
+            ${unsubscribeBlock}
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
 }
