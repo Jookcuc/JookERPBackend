@@ -177,15 +177,6 @@ export class ProjectsService {
     return this.memberRepository.remove(member);
   }
 
-  async findMemberByID(id: CreateProjectMemberDto['employeeId']) {
-    const member = await this.memberRepository.findOne({
-      where: { id },
-      relations: ['employee', 'project'],
-    });
-    if (!member) throw new NotFoundException(`Member with ID ${id} not found`);
-    return member;
-  }
-
   // --- PHASES ---
 
   async createPhase(dto: CreateProjectPhaseDto) {
