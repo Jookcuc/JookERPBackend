@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import * as dotenv from 'dotenv';
 import { DataSource } from 'typeorm';
+import { join } from 'path';
 
 dotenv.config();
 
@@ -12,7 +13,7 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   ssl: { rejectUnauthorized: false },
-  entities: [__dirname + '/**/*.entity{.ts,.js}'],
-  migrations: [__dirname + '/migrations/*{.ts,.js}'],
+  entities: [join(process.cwd(), 'src/**/*.entity{.ts,.js}')],
+  migrations: [join(process.cwd(), 'src/migrations/*{.ts,.js}')],
   migrationsTableName: 'typeorm_migrations',
 });

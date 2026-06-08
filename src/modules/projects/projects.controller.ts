@@ -28,6 +28,27 @@ import {
   CreateProjectTaskDto,
   UpdateProjectTaskDto,
 } from './dto/project-task.dto';
+import {
+  CreateProjectMemberDto,
+  UpdateProjectMemberDto,
+} from './dto/project-member.dto';
+import {
+  CreateProjectMaterialDto,
+  UpdateProjectMaterialDto,
+} from './dto/project-material.dto';
+import { CreateTimeLogDto, UpdateTimeLogDto } from './dto/time-log.dto';
+import {
+  CreateProjectExpenseDto,
+  UpdateProjectExpenseDto,
+} from './dto/project-expense.dto';
+import {
+  CreateMaterialConsumptionDto,
+  UpdateMaterialConsumptionDto,
+} from './dto/material-consumption.dto';
+import {
+  CreateProjectUpdateDto,
+  UpdateProjectUpdateDto,
+} from './dto/project-update.dto';
 
 @ApiTags('Projects')
 @ApiBearerAuth('JWT-auth')
@@ -68,6 +89,78 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Eliminar proyecto' })
   removeProject(@Param('id', ParseIntPipe) id: number) {
     return this.projectsService.removeProject(id);
+  }
+
+  // --- PROJECT MEMBERS (RF3 - Recursos humanos) ---
+
+  @Post('members')
+  @ApiOperation({ summary: 'Asignar un miembro al proyecto' })
+  createMember(@Body() dto: CreateProjectMemberDto) {
+    return this.projectsService.createMember(dto);
+  }
+
+  @Get(':projectId/members')
+  @ApiOperation({ summary: 'Listar miembros de un proyecto' })
+  findMembersByProject(@Param('projectId', ParseIntPipe) projectId: number) {
+    return this.projectsService.findMembersByProject(projectId);
+  }
+
+  @Patch('members/:id')
+  @ApiOperation({ summary: 'Actualizar asignación de miembro' })
+  updateMember(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProjectMemberDto,
+  ) {
+    return this.projectsService.updateMember(id, dto);
+  }
+
+  @Get('members/:id')
+  @ApiOperation({ summary: 'Obtener un miembro por ID del proyecto' })
+  findMemberById(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.findMemberById(id);
+  }
+
+  @Delete('members/:id')
+  @ApiOperation({ summary: 'Remover miembro del proyecto' })
+  removeMember(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.removeMember(id);
+  }
+
+  // --- PROJECT MATERIALS (RF3 - Planificación de materiales) ---
+
+  @Post('materials')
+  @ApiOperation({ summary: 'Planificar un material para el proyecto' })
+  createMaterial(@Body() dto: CreateProjectMaterialDto) {
+    return this.projectsService.createMaterial(dto);
+  }
+
+  @Get(':projectId/materials')
+  @ApiOperation({ summary: 'Listar materiales planificados de un proyecto' })
+  findMaterialsByProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ) {
+    return this.projectsService.findMaterialsByProject(projectId);
+  }
+
+  @Get('materials/:id')
+  @ApiOperation({ summary: 'Obtener un material planificado por ID' })
+  findMaterialById(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.findMaterialById(id);
+  }
+
+  @Patch('materials/:id')
+  @ApiOperation({ summary: 'Actualizar material planificado' })
+  updateMaterial(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProjectMaterialDto,
+  ) {
+    return this.projectsService.updateMaterial(id, dto);
+  }
+
+  @Delete('materials/:id')
+  @ApiOperation({ summary: 'Eliminar material planificado' })
+  removeMaterial(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.removeMaterial(id);
   }
 
   // --- PHASES ---
@@ -138,4 +231,153 @@ export class ProjectsController {
   removeTask(@Param('id', ParseIntPipe) id: number) {
     return this.projectsService.removeTask(id);
   }
+
+  // --- TIME LOGS (RF4 - Registro de tiempos) ---
+
+  @Post('time-logs')
+  @ApiOperation({ summary: 'Registrar tiempo trabajado' })
+  createTimeLog(@Body() dto: CreateTimeLogDto) {
+    return this.projectsService.createTimeLog(dto);
+  }
+
+  @Get(':projectId/time-logs')
+  @ApiOperation({ summary: 'Listar registros de tiempo de un proyecto' })
+  findTimeLogsByProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ) {
+    return this.projectsService.findTimeLogsByProject(projectId);
+  }
+
+  @Get('time-logs/:id')
+  @ApiOperation({ summary: 'Obtener un registro de tiempo por ID' })
+  findTimeLogById(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.findTimeLogById(id);
+  }
+
+  @Patch('time-logs/:id')
+  @ApiOperation({ summary: 'Actualizar registro de tiempo' })
+  updateTimeLog(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateTimeLogDto,
+  ) {
+    return this.projectsService.updateTimeLog(id, dto);
+  }
+
+  @Delete('time-logs/:id')
+  @ApiOperation({ summary: 'Eliminar registro de tiempo' })
+  removeTimeLog(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.removeTimeLog(id);
+  }
+
+  // --- PROJECT EXPENSES (RF4 - Registro de gastos) ---
+
+  @Post('expenses')
+  @ApiOperation({ summary: 'Registrar un gasto del proyecto' })
+  createExpense(@Body() dto: CreateProjectExpenseDto) {
+    return this.projectsService.createExpense(dto);
+  }
+
+  @Get(':projectId/expenses')
+  @ApiOperation({ summary: 'Listar gastos de un proyecto' })
+  findExpensesByProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ) {
+    return this.projectsService.findExpensesByProject(projectId);
+  }
+
+  @Get('expenses/:id')
+  @ApiOperation({ summary: 'Obtener un gasto por ID' })
+  findExpenseById(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.findExpenseById(id);
+  }
+
+  @Patch('expenses/:id')
+  @ApiOperation({ summary: 'Actualizar gasto' })
+  updateExpense(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProjectExpenseDto,
+  ) {
+    return this.projectsService.updateExpense(id, dto);
+  }
+
+  @Delete('expenses/:id')
+  @ApiOperation({ summary: 'Eliminar gasto' })
+  removeExpense(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.removeExpense(id);
+  }
+
+  // --- MATERIAL CONSUMPTIONS (RF4 - Consumo real de materiales) ---
+
+  @Post('consumptions')
+  @ApiOperation({ summary: 'Registrar consumo real de material' })
+  createConsumption(@Body() dto: CreateMaterialConsumptionDto) {
+    return this.projectsService.createConsumption(dto);
+  }
+
+  @Get(':projectId/consumptions')
+  @ApiOperation({ summary: 'Listar consumos de material de un proyecto' })
+  findConsumptionsByProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ) {
+    return this.projectsService.findConsumptionsByProject(projectId);
+  }
+
+  @Get('consumptions/:id')
+  @ApiOperation({ summary: 'Obtener un consumo por ID' })
+  findConsumptionById(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.findConsumptionById(id);
+  }
+
+  @Patch('consumptions/:id')
+  @ApiOperation({ summary: 'Actualizar consumo de material' })
+  updateConsumption(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateMaterialConsumptionDto,
+  ) {
+    return this.projectsService.updateConsumption(id, dto);
+  }
+
+  @Delete('consumptions/:id')
+  @ApiOperation({ summary: 'Eliminar consumo de material' })
+  removeConsumption(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.removeConsumption(id);
+  }
+
+  // --- PROJECT UPDATES (RF4 - Novedades del proyecto) ---
+
+  @Post('updates')
+  @ApiOperation({ summary: 'Registrar una novedad del proyecto' })
+  createUpdate(@Body() dto: CreateProjectUpdateDto) {
+    return this.projectsService.createUpdate(dto);
+  }
+
+  @Get(':projectId/updates')
+  @ApiOperation({ summary: 'Listar novedades de un proyecto' })
+  findUpdatesByProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ) {
+    return this.projectsService.findUpdatesByProject(projectId);
+  }
+
+  @Get('updates/:id')
+  @ApiOperation({ summary: 'Obtener una novedad por ID' })
+  findUpdateById(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.findUpdateById(id);
+  }
+
+  @Patch('updates/:id')
+  @ApiOperation({ summary: 'Actualizar novedad' })
+  updateUpdate(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProjectUpdateDto,
+  ) {
+    return this.projectsService.updateUpdate(id, dto);
+  }
+
+  @Delete('updates/:id')
+  @ApiOperation({ summary: 'Eliminar novedad' })
+  removeUpdate(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.removeUpdate(id);
+  }
 }
+

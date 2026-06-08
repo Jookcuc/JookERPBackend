@@ -141,7 +141,9 @@ interface PreparedInvoicePayload {
   voucherUrl?: string;
   bankId?: number;
   items: ResolvedInvoiceItem[];
+  projectId?: number;
 }
+
 
 export type CalendarGroupedResponse = Record<string, CalendarInvoiceItem[]>;
 
@@ -209,6 +211,7 @@ export class InvoicesService {
       bankId: dto.bankId,
       userId: user.id,
       companyId: user.companyId,
+      projectId: dto.projectId,
       items: dto.items.map((item) =>
         this.itemRepo.create({
           productId: item.productId,
@@ -217,6 +220,7 @@ export class InvoicesService {
         }),
       ),
     });
+
 
     const saved = await this.invoiceRepo.save(invoice);
 
@@ -236,6 +240,7 @@ export class InvoicesService {
           productId: item.productId,
           userId: user.id,
           companyId: user.companyId,
+          projectId: dto.projectId,
           movementType:
             dto.invoiceType === InvoiceType.VENTA
               ? MovementType.SALIDA_VENTA
@@ -244,6 +249,7 @@ export class InvoicesService {
           relatedDocument: dto.invoiceNumber,
         }),
       );
+
     }
 
     const txType =
@@ -291,7 +297,9 @@ export class InvoicesService {
       paymentConditions: dto.paymentConditions,
       bankId: dto.bankId,
       items,
+      projectId: dto.projectId,
     };
+
   }
 
   private async preparePurchaseInvoice(
@@ -321,7 +329,9 @@ export class InvoicesService {
       paymentConditions: dto.paymentConditions,
       voucherUrl: dto.voucherUrl,
       items,
+      projectId: dto.projectId,
     };
+
   }
 
   private async findContactByType(
@@ -435,6 +445,10 @@ export class InvoicesService {
     if (status) {
       qb.andWhere('inv.status = :status', { status });
     }
+    if (filters.projectId) {
+      qb.andWhere('inv.projectId = :projectId', { projectId: filters.projectId });
+    }
+
     if (startDate) {
       qb.andWhere('inv.issueDate >= :startDate', { startDate });
     }

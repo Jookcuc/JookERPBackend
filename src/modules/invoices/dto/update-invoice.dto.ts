@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsDateString } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsDateString, IsInt } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { InvoiceStatus } from '../entities/invoice.entity';
 
@@ -25,4 +25,9 @@ export class UpdateInvoiceDto {
   @IsOptional()
   @IsString()
   voucherUrl?: string;
+
+  @ApiPropertyOptional({ example: 1, description: 'ID del proyecto' })
+  @IsOptional()
+  @IsInt()
+  projectId?: number;
 }

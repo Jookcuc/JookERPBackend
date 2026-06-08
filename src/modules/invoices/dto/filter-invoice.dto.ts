@@ -47,4 +47,10 @@ export class FilterInvoiceDto {
   @IsInt()
   @Min(1)
   limit?: number = 5;
+
+  @ApiPropertyOptional({ example: 1, description: 'ID del proyecto' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  projectId?: number;
 }

@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Invoice } from '../../invoices/entities/invoice.entity';
 import { Bank } from '../../banks/entities/bank.entity';
+import { Project } from '../../projects/entities/project.entity';
 
 export enum MovementType {
   ENTRADA = 'Entrada',
@@ -71,9 +72,17 @@ export class Transaction {
   @Column({ name: 'bank_id', nullable: true })
   bankId: number;
 
+  @ManyToOne(() => Project, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'project_id' })
+  project: Project;
+
+  @Column({ name: 'project_id', nullable: true })
+  projectId: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
 }

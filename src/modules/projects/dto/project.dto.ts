@@ -35,6 +35,11 @@ export class CreateProjectDto {
   @IsString()
   description?: string;
 
+  @ApiProperty({ example: 'Objetivos del proyecto...', required: false })
+  @IsOptional()
+  @IsString()
+  objectives?: string;
+
   @ApiProperty({ enum: ProjectStatus, required: false })
   @IsOptional()
   @IsEnum(ProjectStatus)

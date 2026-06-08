@@ -26,6 +26,33 @@ import {
   CreateProjectTaskDto,
   UpdateProjectTaskDto,
 } from '../dto/project-task.dto';
+import { ProjectMember } from '../entities/project-member.entity';
+import {
+  CreateProjectMemberDto,
+  UpdateProjectMemberDto,
+} from '../dto/project-member.dto';
+import { ProjectMaterial } from '../entities/project-material.entity';
+import {
+  CreateProjectMaterialDto,
+  UpdateProjectMaterialDto,
+} from '../dto/project-material.dto';
+import { TimeLog } from '../entities/time-log.entity';
+import { CreateTimeLogDto, UpdateTimeLogDto } from '../dto/time-log.dto';
+import { ProjectExpense } from '../entities/project-expense.entity';
+import {
+  CreateProjectExpenseDto,
+  UpdateProjectExpenseDto,
+} from '../dto/project-expense.dto';
+import { MaterialConsumption } from '../entities/material-consumption.entity';
+import {
+  CreateMaterialConsumptionDto,
+  UpdateMaterialConsumptionDto,
+} from '../dto/material-consumption.dto';
+import { ProjectUpdate } from '../entities/project-update.entity';
+import {
+  CreateProjectUpdateDto,
+  UpdateProjectUpdateDto,
+} from '../dto/project-update.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -38,6 +65,18 @@ export class ProjectsService {
     private readonly milestoneRepository: Repository<ProjectMilestone>,
     @InjectRepository(ProjectTask)
     private readonly taskRepository: Repository<ProjectTask>,
+    @InjectRepository(ProjectMember)
+    private readonly memberRepository: Repository<ProjectMember>,
+    @InjectRepository(ProjectMaterial)
+    private readonly materialRepository: Repository<ProjectMaterial>,
+    @InjectRepository(TimeLog)
+    private readonly timeLogRepository: Repository<TimeLog>,
+    @InjectRepository(ProjectExpense)
+    private readonly expenseRepository: Repository<ProjectExpense>,
+    @InjectRepository(MaterialConsumption)
+    private readonly consumptionRepository: Repository<MaterialConsumption>,
+    @InjectRepository(ProjectUpdate)
+    private readonly updateRepository: Repository<ProjectUpdate>,
   ) {}
 
   // --- PROJECTS ---
@@ -78,6 +117,7 @@ export class ProjectsService {
         'company',
         'contact',
         'manager',
+        'members',
         'phases',
         'phases.tasks',
         'phases.tasks.dependsOn',
@@ -100,6 +140,50 @@ export class ProjectsService {
   async removeProject(id: number) {
     const project = await this.findProjectById(id);
     return this.projectRepository.remove(project);
+  }
+
+  // --- PROJECT MEMBERS ---
+  async createMember(dto: CreateProjectMemberDto) {
+    const member = this.memberRepository.create(dto);
+    return this.memberRepository.save(member);
+  }
+
+  async findMembersByProject(projectId: number) {
+    return this.memberRepository.find({
+      where: { projectId },
+      relations: ['employee'],
+    });
+  }
+
+  async findMemberById(id: number) {
+    const member = await this.memberRepository.findOne({
+      where: { id },
+      relations: ['employee', 'project'],
+    });
+    if (!member) throw new NotFoundException(`Member with ID ${id} not found`);
+    return member;
+  }
+
+  async updateMember(id: number, dto: UpdateProjectMemberDto) {
+    const member = await this.memberRepository.findOne({ where: { id } });
+    if (!member) throw new NotFoundException(`Member with ID ${id} not found`);
+    this.memberRepository.merge(member, dto);
+    return this.memberRepository.save(member);
+  }
+
+  async removeMember(id: number) {
+    const member = await this.memberRepository.findOne({ where: { id } });
+    if (!member) throw new NotFoundException(`Member with ID ${id} not found`);
+    return this.memberRepository.remove(member);
+  }
+
+  async findMemberByID(id: CreateProjectMemberDto['employeeId']) {
+    const member = await this.memberRepository.findOne({
+      where: { id },
+      relations: ['employee', 'project'],
+    });
+    if (!member) throw new NotFoundException(`Member with ID ${id} not found`);
+    return member;
   }
 
   // --- PHASES ---
@@ -199,9 +283,219 @@ export class ProjectsService {
     return this.taskRepository.save(task);
   }
 
+
   async removeTask(id: number) {
     const task = await this.taskRepository.findOne({ where: { id } });
     if (!task) throw new NotFoundException(`Task with ID ${id} not found`);
     return this.taskRepository.remove(task);
+  }
+
+  // --- PROJECT MATERIALS (RF3 - Planificación de materiales) ---
+
+  async createMaterial(dto: CreateProjectMaterialDto) {
+    const material = this.materialRepository.create(dto);
+    return this.materialRepository.save(material);
+  }
+
+  async findMaterialsByProject(projectId: number) {
+    return this.materialRepository.find({
+      where: { projectId },
+      relations: ['product', 'task'],
+    });
+  }
+
+  async findMaterialById(id: number) {
+    const material = await this.materialRepository.findOne({
+      where: { id },
+      relations: ['product', 'task', 'project'],
+    });
+    if (!material)
+      throw new NotFoundException(`ProjectMaterial with ID ${id} not found`);
+    return material;
+  }
+
+  async updateMaterial(id: number, dto: UpdateProjectMaterialDto) {
+    const material = await this.materialRepository.findOne({ where: { id } });
+    if (!material)
+      throw new NotFoundException(`ProjectMaterial with ID ${id} not found`);
+    this.materialRepository.merge(material, dto);
+    return this.materialRepository.save(material);
+  }
+
+  async removeMaterial(id: number) {
+    const material = await this.materialRepository.findOne({ where: { id } });
+    if (!material)
+      throw new NotFoundException(`ProjectMaterial with ID ${id} not found`);
+    return this.materialRepository.remove(material);
+  }
+
+  // --- TIME LOGS (RF4 - Registro de tiempos) ---
+
+  async createTimeLog(dto: CreateTimeLogDto) {
+    const timeLog = this.timeLogRepository.create(dto);
+    return this.timeLogRepository.save(timeLog);
+  }
+
+  async findTimeLogsByProject(projectId: number) {
+    return this.timeLogRepository.find({
+      where: { projectId },
+      relations: ['employee', 'task'],
+      order: { date: 'DESC' },
+    });
+  }
+
+  async findTimeLogById(id: number) {
+    const timeLog = await this.timeLogRepository.findOne({
+      where: { id },
+      relations: ['employee', 'task', 'project'],
+    });
+    if (!timeLog)
+      throw new NotFoundException(`TimeLog with ID ${id} not found`);
+    return timeLog;
+  }
+
+  async updateTimeLog(id: number, dto: UpdateTimeLogDto) {
+    const timeLog = await this.timeLogRepository.findOne({ where: { id } });
+    if (!timeLog)
+      throw new NotFoundException(`TimeLog with ID ${id} not found`);
+    this.timeLogRepository.merge(timeLog, dto);
+    return this.timeLogRepository.save(timeLog);
+  }
+
+  async removeTimeLog(id: number) {
+    const timeLog = await this.timeLogRepository.findOne({ where: { id } });
+    if (!timeLog)
+      throw new NotFoundException(`TimeLog with ID ${id} not found`);
+    return this.timeLogRepository.remove(timeLog);
+  }
+
+  // --- PROJECT EXPENSES (RF4 - Registro de gastos) ---
+
+  async createExpense(dto: CreateProjectExpenseDto) {
+    const expense = this.expenseRepository.create(dto);
+    return this.expenseRepository.save(expense);
+  }
+
+  async findExpensesByProject(projectId: number) {
+    return this.expenseRepository.find({
+      where: { projectId },
+      relations: ['task', 'invoice'],
+      order: { expenseDate: 'DESC' },
+    });
+  }
+
+  async findExpenseById(id: number) {
+    const expense = await this.expenseRepository.findOne({
+      where: { id },
+      relations: ['task', 'project', 'invoice'],
+    });
+    if (!expense)
+      throw new NotFoundException(`ProjectExpense with ID ${id} not found`);
+    return expense;
+  }
+
+  async updateExpense(id: number, dto: UpdateProjectExpenseDto) {
+    const expense = await this.expenseRepository.findOne({ where: { id } });
+    if (!expense)
+      throw new NotFoundException(`ProjectExpense with ID ${id} not found`);
+    this.expenseRepository.merge(expense, dto);
+    return this.expenseRepository.save(expense);
+  }
+
+  async removeExpense(id: number) {
+    const expense = await this.expenseRepository.findOne({ where: { id } });
+    if (!expense)
+      throw new NotFoundException(`ProjectExpense with ID ${id} not found`);
+    return this.expenseRepository.remove(expense);
+  }
+
+  // --- MATERIAL CONSUMPTIONS (RF4 - Registro de consumo real de materiales) ---
+
+  async createConsumption(dto: CreateMaterialConsumptionDto) {
+    const consumption = this.consumptionRepository.create(dto);
+    return this.consumptionRepository.save(consumption);
+  }
+
+  async findConsumptionsByProject(projectId: number) {
+    return this.consumptionRepository.find({
+      where: { projectId },
+      relations: ['product', 'task'],
+      order: { date: 'DESC' },
+    });
+  }
+
+  async findConsumptionById(id: number) {
+    const consumption = await this.consumptionRepository.findOne({
+      where: { id },
+      relations: ['product', 'task', 'project'],
+    });
+    if (!consumption)
+      throw new NotFoundException(
+        `MaterialConsumption with ID ${id} not found`,
+      );
+    return consumption;
+  }
+
+  async updateConsumption(id: number, dto: UpdateMaterialConsumptionDto) {
+    const consumption = await this.consumptionRepository.findOne({
+      where: { id },
+    });
+    if (!consumption)
+      throw new NotFoundException(
+        `MaterialConsumption with ID ${id} not found`,
+      );
+    this.consumptionRepository.merge(consumption, dto);
+    return this.consumptionRepository.save(consumption);
+  }
+
+  async removeConsumption(id: number) {
+    const consumption = await this.consumptionRepository.findOne({
+      where: { id },
+    });
+    if (!consumption)
+      throw new NotFoundException(
+        `MaterialConsumption with ID ${id} not found`,
+      );
+    return this.consumptionRepository.remove(consumption);
+  }
+
+  // --- PROJECT UPDATES (RF4 - Registro de novedades) ---
+
+  async createUpdate(dto: CreateProjectUpdateDto) {
+    const update = this.updateRepository.create(dto);
+    return this.updateRepository.save(update);
+  }
+
+  async findUpdatesByProject(projectId: number) {
+    return this.updateRepository.find({
+      where: { projectId },
+      relations: ['author'],
+      order: { date: 'DESC' },
+    });
+  }
+
+  async findUpdateById(id: number) {
+    const update = await this.updateRepository.findOne({
+      where: { id },
+      relations: ['author', 'project'],
+    });
+    if (!update)
+      throw new NotFoundException(`ProjectUpdate with ID ${id} not found`);
+    return update;
+  }
+
+  async updateUpdate(id: number, dto: UpdateProjectUpdateDto) {
+    const update = await this.updateRepository.findOne({ where: { id } });
+    if (!update)
+      throw new NotFoundException(`ProjectUpdate with ID ${id} not found`);
+    this.updateRepository.merge(update, dto);
+    return this.updateRepository.save(update);
+  }
+
+  async removeUpdate(id: number) {
+    const update = await this.updateRepository.findOne({ where: { id } });
+    if (!update)
+      throw new NotFoundException(`ProjectUpdate with ID ${id} not found`);
+    return this.updateRepository.remove(update);
   }
 }

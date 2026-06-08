@@ -69,4 +69,10 @@ export class CreateSalesInvoiceDto {
   @ValidateNested({ each: true })
   @Type(() => InvoiceItemInputDto)
   items: InvoiceItemInputDto[];
+
+  @ApiPropertyOptional({ example: 1, description: 'ID del proyecto' })
+  @IsOptional()
+  @IsInt()
+  projectId?: number;
 }
+

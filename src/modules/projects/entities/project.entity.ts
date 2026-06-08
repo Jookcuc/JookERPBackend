@@ -13,6 +13,16 @@ import { Employee } from '../../personnel/entities/employee.entity';
 import { Contact } from '../../invoices/entities/contact.entity';
 import { ProjectPhase } from './project-phase.entity';
 import { ProjectMilestone } from './project-milestone.entity';
+import { ProjectMember } from './project-member.entity';
+import { ProjectExpense } from './project-expense.entity';
+import { ProjectUpdate } from './project-update.entity';
+import { TimeLog } from './time-log.entity';
+import { MaterialConsumption } from './material-consumption.entity';
+import { ProjectMaterial } from './project-material.entity';
+import { Invoice } from '../../invoices/entities/invoice.entity';
+import { InventoryMovement } from '../../Inventory/entities/inventory-movement.entity';
+import { Transaction } from '../../transactions/entities/transaction.entity';
+
 
 export enum ProjectStatus {
   PLANIFICACION = 'PLANIFICACION',
@@ -63,6 +73,9 @@ export class Project {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @Column({ type: 'text', nullable: true })
+  objectives: string;
+
   @Column({
     type: 'varchar',
     length: 30,
@@ -103,4 +116,32 @@ export class Project {
 
   @OneToMany(() => ProjectMilestone, (milestone) => milestone.project)
   milestones: ProjectMilestone[];
+
+  @OneToMany(() => ProjectMember, (member) => member.project)
+  members: ProjectMember[];
+
+  @OneToMany(() => ProjectExpense, (expense) => expense.project)
+  expenses: ProjectExpense[];
+
+  @OneToMany(() => ProjectUpdate, (update) => update.project)
+  updates: ProjectUpdate[];
+
+  @OneToMany(() => TimeLog, (timeLog) => timeLog.project)
+  timeLogs: TimeLog[];
+
+  @OneToMany(() => ProjectMaterial, (material) => material.project)
+  plannedMaterials: ProjectMaterial[];
+
+  @OneToMany(() => MaterialConsumption, (consumption) => consumption.project)
+  materialConsumptions: MaterialConsumption[];
+
+  @OneToMany(() => Invoice, (invoice) => invoice.project)
+  invoices: Invoice[];
+
+  @OneToMany(() => InventoryMovement, (movement) => movement.project)
+  inventoryMovements: InventoryMovement[];
+
+  @OneToMany(() => Transaction, (transaction) => transaction.project)
+  transactions: Transaction[];
 }
+

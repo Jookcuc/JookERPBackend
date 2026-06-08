@@ -36,6 +36,7 @@ interface FilterSubset {
   movement?: string;
   startDate?: string;
   endDate?: string;
+  projectId?: number;
 }
 
 export interface AuthenticatedUser {
@@ -45,7 +46,9 @@ export interface AuthenticatedUser {
 interface InvoiceSource {
   id: number;
   invoiceNumber: string;
+  projectId?: number;
 }
+
 
 interface SelectOption {
   label: string;
@@ -232,6 +235,7 @@ export class TransactionsService {
     const transaction = this.transactionRepo.create({
       companyId: user.companyId,
       invoiceId: invoice.id,
+      projectId: invoice.projectId,
       bankId: bankId,
       reference: invoice.invoiceNumber,
       category: category,
@@ -251,7 +255,7 @@ export class TransactionsService {
     filters: FilterSubset,
     companyId: number,
   ): SelectQueryBuilder<Transaction> {
-    const { category, movement, startDate, endDate } = filters;
+    const { category, movement, startDate, endDate, projectId } = filters;
 
     const qb = this.transactionRepo
       .createQueryBuilder('tx')
@@ -262,6 +266,7 @@ export class TransactionsService {
     if (movement) qb.andWhere('tx.movement = :movement', { movement });
     if (startDate) qb.andWhere('tx.date >= :startDate', { startDate });
     if (endDate) qb.andWhere('tx.date <= :endDate', { endDate });
+    if (projectId) qb.andWhere('tx.projectId = :projectId', { projectId });
 
     return qb.orderBy('tx.createdAt', 'DESC');
   }

@@ -8,8 +8,12 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { ProjectPhase } from './project-phase.entity';
+import { TimeLog } from './time-log.entity';
+import { ProjectExpense } from './project-expense.entity';
+import { MaterialConsumption } from './material-consumption.entity';
 
 export enum TaskPriority {
   BAJA = 'BAJA',
@@ -82,4 +86,13 @@ export class ProjectTask {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @OneToMany(() => TimeLog, (timeLog) => timeLog.task)
+  timeLogs: TimeLog[];
+
+  @OneToMany(() => ProjectExpense, (expense) => expense.task)
+  expenses: ProjectExpense[];
+
+  @OneToMany(() => MaterialConsumption, (consumption) => consumption.task)
+  materialConsumptions: MaterialConsumption[];
 }

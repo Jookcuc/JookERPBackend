@@ -36,4 +36,11 @@ export class FilterTransactionDto {
   @IsInt()
   @Min(1)
   limit?: number = 5;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  projectId?: number;
 }
+

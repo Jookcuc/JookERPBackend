@@ -1,11 +1,13 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 import { Product } from './product.entity';
+import { Project } from '../../projects/entities/project.entity';
 
 export enum MovementType {
   ENTRADA_COMPRA = 'ENTRADA_COMPRA',
   SALIDA_VENTA = 'SALIDA_VENTA',
   DEVOLUCION = 'DEVOLUCION',
   AJUSTE_MANUAL = 'AJUSTE_MANUAL',
+  SALIDA_PROYECTO = 'SALIDA_PROYECTO',
 }
 
 @Entity('inventory_movement')
@@ -40,4 +42,11 @@ export class InventoryMovement {
   @ManyToOne(() => Product, (product) => product.movements)
   @JoinColumn({ name: 'product_id' })
   product: Product;
+
+  @ManyToOne(() => Project, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'project_id' })
+  project: Project;
+
+  @Column({ name: 'project_id', nullable: true })
+  projectId: number;
 }

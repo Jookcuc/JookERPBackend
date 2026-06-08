@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsDateString,
   IsEnum,
@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  IsInt,
 } from 'class-validator';
 import { MovementType } from '../entities/transaction.entity';
 
@@ -49,4 +50,10 @@ export class CreateTransactionDto {
   @IsNotEmpty()
   @IsDateString()
   date: string;
+
+  @ApiPropertyOptional({ example: 1, description: 'ID del proyecto' })
+  @IsOptional()
+  @IsInt()
+  projectId?: number;
 }
+

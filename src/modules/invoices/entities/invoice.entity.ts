@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, JoinColum
 import { Contact } from './contact.entity';
 import { InvoiceItem } from './invoice-item.entity';
 import { Bank } from '../../banks/entities/bank.entity';
+import { Project } from '../../projects/entities/project.entity';
 
 export enum InvoiceType {
   COMPRA = 'COMPRA',
@@ -72,4 +73,11 @@ export class Invoice {
 
   @Column({ name: 'bank_id', nullable: true })
   bankId: number;
+
+  @ManyToOne(() => Project, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'project_id' })
+  project: Project;
+
+  @Column({ name: 'project_id', nullable: true })
+  projectId: number;
 }
