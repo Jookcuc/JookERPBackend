@@ -184,6 +184,22 @@ export class ProjectsService {
     return this.phaseRepository.save(phase);
   }
 
+  async findPhasesByProject(projectId: number) {
+    return this.phaseRepository.find({
+      where: { projectId },
+      order: { startDate: 'ASC' },
+    });
+  }
+
+  async findPhaseById(id: number) {
+    const phase = await this.phaseRepository.findOne({
+      where: { id },
+      relations: ['tasks', 'tasks.dependsOn', 'milestones'],
+    });
+    if (!phase) throw new NotFoundException(`Phase with ID ${id} not found`);
+    return phase;
+  }
+
   async updatePhase(id: number, dto: UpdateProjectPhaseDto) {
     const phase = await this.phaseRepository.findOne({ where: { id } });
     if (!phase) throw new NotFoundException(`Phase with ID ${id} not found`);
@@ -205,6 +221,24 @@ export class ProjectsService {
     return this.milestoneRepository.save(milestone);
   }
 
+  async findMilestonesByProject(projectId: number) {
+    return this.milestoneRepository.find({
+      where: { projectId },
+      relations: ['phase'],
+      order: { date: 'ASC' },
+    });
+  }
+
+  async findMilestoneById(id: number) {
+    const milestone = await this.milestoneRepository.findOne({
+      where: { id },
+      relations: ['project', 'phase'],
+    });
+    if (!milestone)
+      throw new NotFoundException(`Milestone with ID ${id} not found`);
+    return milestone;
+  }
+
   async updateMilestone(id: number, dto: UpdateProjectMilestoneDto) {
     const milestone = await this.milestoneRepository.findOne({ where: { id } });
     if (!milestone)
@@ -222,6 +256,23 @@ export class ProjectsService {
   }
 
   // --- TASKS ---
+
+  async findTasksByPhase(phaseId: number) {
+    return this.taskRepository.find({
+      where: { phaseId },
+      relations: ['dependsOn', 'timeLogs'],
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async findTaskById(id: number) {
+    const task = await this.taskRepository.findOne({
+      where: { id },
+      relations: ['phase', 'phase.project', 'dependsOn', 'timeLogs'],
+    });
+    if (!task) throw new NotFoundException(`Task with ID ${id} not found`);
+    return task;
+  }
 
   async createTask(dto: CreateProjectTaskDto) {
     const { dependsOnIds, ...taskData } = dto;

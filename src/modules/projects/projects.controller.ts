@@ -171,6 +171,20 @@ export class ProjectsController {
     return this.projectsService.createPhase(createPhaseDto);
   }
 
+  @Get(':projectId/phases')
+  @ApiOperation({ summary: 'Listar fases de un proyecto' })
+  findPhasesByProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ) {
+    return this.projectsService.findPhasesByProject(projectId);
+  }
+
+  @Get('phases/:id')
+  @ApiOperation({ summary: 'Obtener una fase por ID' })
+  findPhaseById(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.findPhaseById(id);
+  }
+
   @Patch('phases/:id')
   @ApiOperation({ summary: 'Actualizar fase' })
   updatePhase(
@@ -194,6 +208,20 @@ export class ProjectsController {
     return this.projectsService.createMilestone(createMilestoneDto);
   }
 
+  @Get(':projectId/milestones')
+  @ApiOperation({ summary: 'Listar hitos de un proyecto' })
+  findMilestonesByProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ) {
+    return this.projectsService.findMilestonesByProject(projectId);
+  }
+
+  @Get('milestones/:id')
+  @ApiOperation({ summary: 'Obtener un hito por ID' })
+  findMilestoneById(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.findMilestoneById(id);
+  }
+
   @Patch('milestones/:id')
   @ApiOperation({ summary: 'Actualizar hito' })
   updateMilestone(
@@ -215,6 +243,18 @@ export class ProjectsController {
   @ApiOperation({ summary: 'Crear una tarea' })
   createTask(@Body() createTaskDto: CreateProjectTaskDto) {
     return this.projectsService.createTask(createTaskDto);
+  }
+
+  @Get('phases/:phaseId/tasks')
+  @ApiOperation({ summary: 'Listar tareas de una fase' })
+  findTasksByPhase(@Param('phaseId', ParseIntPipe) phaseId: number) {
+    return this.projectsService.findTasksByPhase(phaseId);
+  }
+
+  @Get('tasks/:id')
+  @ApiOperation({ summary: 'Obtener una tarea por ID' })
+  findTaskById(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.findTaskById(id);
   }
 
   @Patch('tasks/:id')
